@@ -1,0 +1,821 @@
+<template>
+    <div class="logo-container">
+        <img src={logoImageSrcUrl} alt="ORA Logo" class="logo">
+    </div>
+    
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>Welcome to <b>ORA Broker Portal.</b></h2>
+            <p>
+                Before accessing our open inventory and booking units, we need to finish your account and sign agreement documents.
+                <br/><br/>
+                Already a Registered Broker? &nbsp;
+                <a href="javascript:void(0)" onclick={handleLoginPage} class="login-link">Login here</a>
+            </p>
+        </div>
+
+        <div class="content">
+            <h1 class="title">BROKER REGISTRATION</h1>
+            <template if:false={showSuccessPage}>
+                <p class="subtitle">
+                    Please fill out all details to complete your company's registration. These details should match your company registration and licenses.<br/>
+                    Please prepare your documents ahead of registration as the session expires in 20 minutes.
+                </p>
+
+                <div class="form">
+
+                    <span>
+                        <template if:true={showError}>
+                            <div class="error">
+                                <lightning-formatted-rich-text style="color:red; font-size:16px; font-weight: bold;" value={errorMessage}></lightning-formatted-rich-text>
+                            </div>
+                        </template>
+                        <br/>
+                    </span>
+
+                    <template if:true={Spinner}>
+                        <div class="spinner-container">
+                            <div class="spinner-overlay">
+                                <lightning-spinner alternative-text="Loading" size="large"></lightning-spinner>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <template if:true={BrokerTypesValues.data}>
+                        <lightning-combobox label="Brokerage Types"
+                            placeholder="Brokerage Types" data-id="brokerageTypes" value={brokerageTypes}
+                            options={BrokerTypesValues.data.values} onchange={handleInputChange} required>
+                        </lightning-combobox>
+                    </template>
+
+                    <lightning-accordion active-section-name="A">
+                        
+                        <lightning-accordion-section name="A" label="Basic Information">
+
+                            <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="brokerageAgencyName" value={brokerageAgencyName}
+                                        label="Brokerage Agency Name"  placeholder="Brokerage Agency Name" onchange={handleInputChange} required></lightning-input><!--pattern="^[a-zA-Z\s]*$"-->
+                                </div>
+                                <!-- Empty column -->
+                                <div class="slds-col slds-size_1-of-2"></div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" data-id="brokerOfficeName" value={brokerOfficeName}
+                                        label="Broker Office Name"  placeholder="Broker Office Name" onchange={handleInputChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <template if:true={filteredAgencyLocationOptions}>
+                                        <lightning-combobox
+                                            label="Brokerage Agency Location"
+                                            data-id="agencyLocation"
+                                            value={formData.agencyLocation}
+                                            placeholder="Brokerage Agency Location"
+                                            options={filteredAgencyLocationOptions}
+                                            onchange={handleInputChange}
+                                            required>
+                                        </lightning-combobox>
+                                    </template>
+                                    
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" data-id="tradeLicenseName" value={tradeLicenseName} required
+                                        label="Trade License Name"  placeholder="Trade License Name" onchange={handleInputChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input  type="text" label="Trade License Number" placeholder="Trade License Number" 
+                                        value={tradeLicenseNumber} data-id="tradeLicenseNumber" onchange={handleInputChange} required></lightning-input>
+                                    <template if:true={checkTradeLNumber}>
+                                        <div style="color:red;font-weight: bold;">{errorDupliTradeMessage}</div>
+                                    </template>
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <template if:false={internationLocation}>
+                                        <lightning-input type="file" data-id="tradeLicenseCopy"
+                                        accept={allowedFileTypes} required
+                                        label="Trade License Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                
+                                    </template>
+                                    <template if:true={internationLocation}>
+                                        <lightning-input type="file" data-id="tradeLicenseCopy"
+                                        accept={allowedFileTypes} required
+                                        label="Trade License/Registration Certificate" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                
+                                    </template>
+                                    
+                                    <template if:true={checktradeLicenseCopy}>
+                                        <span style="color:green">Trade License Uploaded</span>
+                                    </template>
+                                    <template if:true={errortradeLicenseCopy}>
+                                        <div style="color:red;font-weight: bold;">{errortradeLicenseCopyDoc}</div>
+                                    </template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-id="memorandumCopy"
+                                        accept={allowedFileTypes} required
+                                        label="Memorandum or Articles of Association" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                                    <template if:true={checkmemorandumCopy}>
+                                        <span style="color:green">Memorandum Uploaded</span>
+                                    </template>
+                                    <template if:true={errormemorandumCopy}>
+                                        <div style="color:red;font-weight: bold;">{errormemorandumCopyDoc}</div>
+                                    </template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input  type="date" placeholder="Trade License Expiry Date" label="Trade License Expiry Date"
+                                        min={today} value={tradeLicenseExpiryDate} data-id="tradeLicenseExpiryDate" onchange={handleInputChange} required></lightning-input>
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="email" placeholder="email@address.com" label="Agency Email" 
+                                        value={agencyEmailId} data-id="agencyEmailId" onchange={handleInputChange} required></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!--<template if:true={internationLocation}>-->
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-3">
+                                        
+                                                <lightning-combobox data-id="agencyCountryCode"  label="Country Code"  placeholder="Choose a Country Code" 
+                                                    options={countryCodeOptions}  value={agencyCountryCode}  onchange={handleInputChange}>
+                                                </lightning-combobox>
+                                            </div>
+                                        
+                                            <div class="slds-col slds-size_2-of-3">
+                                                <lightning-input  pattern="[0-9]{1,12}"  placeholder="xxxx xxxx xxxx"  label="Agency Contact Number"
+                                                    value={agencyContactNumber} data-id="agencyContactNumber" onchange={handleInputChange}></lightning-input>
+                                            </div>
+                                        </div>
+                                    <!--</template>
+                                    <template if:false={internationLocation}>
+                                        <lightning-input  pattern="[0-9]{1,12}"  placeholder="(000) xxxx xxxx xxxx"  label="Agency Contact Number"
+                                            value={agencyContactNumber} data-id="agencyContactNumber" onchange={handleInputChange}></lightning-input>
+                                    </template>-->
+                                </div>
+
+
+                                <!--<div class="slds-col slds-size_1-of-2">
+                                    <lightning-input  pattern="[0-9]{1,12}" placeholder="Ranking" label="Ranking"  
+                                        value={ranking} data-id="ranking" onchange={handleInputChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-combobox data-id="salesRepId"  label="Assigned Internal Sales Person"  placeholder="Choose a Sales Person" 
+                                        options={salesRepOptions}  value={salesRepId}  onchange={handleInputChange}>
+                                    </lightning-combobox>
+                                </div>-->
+                                
+
+                                <div class="slds-col slds-size_1-of-2">
+
+                                    <!--<template if:true={internationLocation}>-->
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-3">
+                                        
+                                                <lightning-combobox data-id="landlineCountryCode"  label="Country Code"  placeholder="Choose a Country Code" required 
+                                                    options={countryCodeOptions}  value={landlineCountryCode}  onchange={handleInputChange}>
+                                                </lightning-combobox>
+                                            </div>
+                                        
+                                            <div class="slds-col slds-size_2-of-3">
+                                                <lightning-input  pattern="[0-9]{8}" placeholder="Landline(8 digit)" label="Landline" required
+                                                    value={landline} data-id="landline" onchange={handleInputChange}></lightning-input>
+                                            </div>
+                                        </div>
+                                   <!-- </template>
+                                    <template if:false={internationLocation}>
+                                        <lightning-input  pattern="[0-9]{1,12}" placeholder="Landline" label="Landline" required
+                                        value={landline} data-id="landline" onchange={handleInputChange}></lightning-input>
+                                    </template>-->
+                                    
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input  placeholder="https://example.com" label="Website"  
+                                        value={website} data-id="website" onchange={handleInputChange} type="url" 
+                                        message-when-pattern-mismatch="Please enter a valid website URL (e.g., https://example.com)"></lightning-input>
+                                </div>
+                            
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-id="POACopy" required
+                                        accept={allowedFileTypes}  style="margin-bottom: 1px;"
+                                        label="POA Copy" onchange={handleFileUpload}></lightning-input>
+                                    <template if:true={checkPOACopy}>
+                                        <span style="color:green">POA Copy Uploaded</span>
+                                    </template>
+                                    <template if:true={errorPOACopy}>
+                                        <div style="color:red;font-weight: bold;">{errorPOACopyDoc}</div>
+                                    </template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input  type="date" placeholder="POA Expiry date" label="POA Expiry date"
+                                        min={today} value={POAExpiryDate} data-id="POAExpiryDate" onchange={handleInputChange}></lightning-input>
+                                </div>
+
+                                <template if:true={dubaiLocation}>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input label="ORN Number" placeholder="ORN Number" 
+                                            value={ornNumber} data-id="ornNumber" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input  type="date" placeholder="ORN Issuance Date" label="ORN Issuance Date" max={today}
+                                         value={ornIssuanceDate} data-id="ornIssuanceDate" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="file" data-id="reraCertificate"
+                                            accept={allowedFileTypes} required
+                                            label="Company RERA Certificate" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                    
+                                        <template if:true={checkreraCertificate}>
+                                            <span style="color:green">RERA Certificate Uploaded</span>
+                                        </template>
+                                        <template if:true={errorreraCertificate}>
+                                            <div style="color:red;font-weight: bold;">{errorreraCertificateDoc}</div>
+                                        </template>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input  type="date" placeholder="ORN Expiry Date" label="ORN Expiry Date"
+                                            min={today} value={ornExpiryDate} data-id="ornExpiryDate" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+                                </template>
+
+                                <template if:true={abudhabiLocation}>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input label="ADM Registration Number" placeholder="ADM Registration Number" 
+                                            value={admRegistrationNumber} data-id="admRegistrationNumber" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input  type="date" placeholder="ADM Issuance Date" label="ADM Issuance Date" max={today}
+                                            value={admIssuanceDate} data-id="admIssuanceDate" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="file" data-id="reraCertificate"
+                                            accept={allowedFileTypes}  required
+                                            label="ADM Registration Certificate" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                    
+                                        <template if:true={checkreraCertificate}>
+                                            <span style="color:green">ADM Registration Certificate Uploaded</span>
+                                        </template>
+                                        <template if:true={errorreraCertificate}>
+                                            <div style="color:red;font-weight: bold;">{errorreraCertificateDoc}</div>
+                                        </template>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input  type="date" placeholder="ADM Expiry Date" label="ADM Expiry Date"
+                                            min={today} value={admExpiryDate} data-id="admExpiryDate" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+                                </template>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" data-id="linkedInProfileName" value={linkedInProfileName}
+                                        label="LinkedIn Profile Name"  placeholder="LinkedIn Profile Name" onchange={handleInputChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" data-id="instagramProfileName" value={instagramProfileName}
+                                        label="Instagram Profile Name"  placeholder="Instagram Profile Name" onchange={handleInputChange}></lightning-input>
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" data-id="facebookProfileName" value={facebookProfileName}
+                                        label="Facebook Profile Name"  placeholder="Facebook Profile Name" onchange={handleInputChange}></lightning-input>
+                                </div>
+                                
+
+                            </div>
+                        </lightning-accordion-section>
+
+
+                        <lightning-accordion-section name="B" label="Billing Information">
+                            <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="officeNumber" value={officeNumber}
+                                        label="Office Number"  placeholder="Office Number" onchange={handleInputChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="buildingNumber" value={buildingNumber}
+                                        label="Building Number/Name"  placeholder="Building Number/Name" onchange={handleInputChange}></lightning-input>
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="streetName" value={streetName}
+                                        label="Street Name/Area Name"  placeholder="Street Name/Area Name" onchange={handleInputChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="detailedRegisteredAddress" value={detailedRegisteredAddress} required
+                                        label="Detailed Registered Address"  placeholder="Detailed Registered Address" onchange={handleInputChange}></lightning-input>
+                                        <p style="color: red; font-size: 12px; margin-top: -10px;">
+                                            Please follow this pattern for Detailed Office Address: "Office No, Building Name/No, Street, Area/District, City, Country"
+                                        </p>
+
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="poBox" value={poBox}
+                                        label="P.O. Box"  placeholder="P.O. Box" onchange={handleInputChange}></lightning-input>
+                                </div>
+                            </div>
+                        </lightning-accordion-section>
+
+
+                        <lightning-accordion-section name="C" label="Tax Information">
+                            <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <div class="slds-form-element">
+                                        <label class="slds-form-element__label" for="trnNumber">
+                                            <!--<template if:false={internationLocation}> <abbr class="slds-required" title="required">*</abbr></template>-->
+                                            TRN (Tax Registration Number)
+                                        </label>
+                                        <div class="slds-form-element__control">
+                                            <lightning-input 
+                                                name="trnNumber"
+                                                placeholder="TRN (Tax Registration Number)"
+                                                value={trnNumber}
+                                                data-id="trnNumber"
+                                                onchange={handleInputChange}
+                                                variant="label-hidden">
+                                            </lightning-input>
+                                        </div>
+                                    </div>
+
+                                    <!--<lightning-input  pattern="[0-9]{1,25}" label="TRN (Tax Registration Number)" placeholder="TRN (Tax Registration Number)" 
+                                        value={trnNumber} data-id="trnNumber" onchange={handleInputChange} required></lightning-input>-->
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <div class="slds-form-element">
+                                        <label class="slds-form-element__label" for="taxRegistrationCopy">
+                                            <template if:false={internationLocation}><!--<abbr class="slds-required" title="required">*</abbr>-->Tax registration certificate</template> <template if:true={internationLocation}>Tax registration certificate/Non- VAT declaration form</template>
+                                        </label>
+                                        <div class="slds-form-element__control">
+                                            <lightning-input 
+                                                type="file" style="margin-bottom: 1px;"
+                                                name="taxRegistrationCopy"
+                                                data-id="taxRegistrationCopy"
+                                                accept={allowedFileTypes}
+                                                onchange={handleFileUpload}
+                                                variant="label-hidden">
+                                            </lightning-input>
+                                        </div>
+                                    </div>
+
+                                    <!--<lightning-input type="file" data-id="taxRegistrationCopy"
+                                        accept={allowedFileTypes} required
+                                        label="Tax registration certificate/Non- VAT declaration form" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>-->
+                
+                                    <template if:true={checktaxRegistrationCopy}>
+                                        <span style="color:green">
+                                            <template if:false={internationLocation}>Tax registration certificate</template>
+                                            <template if:true={internationLocation}>Tax registration certificate/Non- VAT declaration form Uploaded</template></span>
+                                    </template>
+                                    <template if:true={errortaxRegistrationCopy}>
+                                        <div style="color:red;font-weight: bold;">{errortaxRegistrationCopyDoc}</div>
+                                    </template>
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+
+                                    <div class="slds-form-element">
+                                        <label class="slds-form-element__label" for="vatCertificate">
+                                            <template if:false={internationLocation}><abbr class="slds-required" title="required">*</abbr> VAT/Non- VAT  Certificate</template>
+                                            <template if:true={internationLocation}> VAT Certificate</template>
+                                        </label>
+                                        <div class="slds-form-element__control">
+                                            <lightning-input  required
+                                                type="file"
+                                                name="vatCertificate"
+                                                data-id="vatCertificate"
+                                                accept={allowedFileTypes}
+                                                onchange={handleFileUpload}
+                                                variant="label-hidden">
+                                            </lightning-input>
+                                        </div>
+                                    </div>
+
+                                    
+                                    <!--<lightning-input type="file" data-id="vatCertificate"
+                                        accept={allowedFileTypes} required
+                                        label="VAT Certificate" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>-->
+                
+                                    <template if:true={checkvatCertificate}>
+                                        <span style="color:green">
+                                            <template if:false={internationLocation}>VAT/Non- VAT  Certificate Uploaded</template>
+                                            <template if:true={internationLocation}>VAT Certificate Uploaded</template>
+                                        </span>
+                                    </template>
+                                    <template if:true={errorvatCertificate}>
+                                        <div style="color:red;font-weight: bold;">{errorvatCertificateDoc}</div>
+                                    </template>
+                                </div>
+                            </div>
+                        </lightning-accordion-section>
+
+
+                        <lightning-accordion-section name="D" label="Bank Details Information">
+                            <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="bankName" value={bankName}
+                                        label="Bank Name"  placeholder="Bank Name" onchange={handleInputChange} required></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="bankBranch" value={bankBranch}
+                                        label="Bank Branch"  placeholder="Bank Branch" onchange={handleInputChange} required></lightning-input>
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input pattern="[0-9]{1,25}"  data-id="accountNumber" value={accountNumber}
+                                        label="Account Number"  placeholder="Account Number" onchange={handleInputChange} required></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="ibanNumber" value={ibanNumber}
+                                        label="IBAN Number"  placeholder="IBAN Number" onchange={handleInputChange} required></lightning-input>
+                                </div>
+
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="swiftCode" value={swiftCode}
+                                        label="Swift Code"  placeholder="Swift Code" onchange={handleInputChange} required></lightning-input>
+                                </div>
+                                <template if:true={internationLocation}>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <template if:true={CurrencyValues.data}>
+                                            <lightning-combobox label="Currency"
+                                                placeholder="Currency" data-id="accountCurrency" value={accountCurrency}
+                                                options={CurrencyValues.data.values} onchange={handleInputChange} required>
+                                            </lightning-combobox>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+
+                        </lightning-accordion-section> 
+
+                        
+                        <lightning-accordion-section name="E" label="Introduced by (ORA team)">
+                            <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-combobox data-id="agencyExecutiveId"  label="ORA Broker Management Team"  placeholder="Choose a Agency Executive" 
+                                        options={salesRepOptions}  value={agencyExecutiveId}  onchange={handleInputChange}>
+                                    </lightning-combobox>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-combobox data-id="intorducedByIds"  label="ORA Sales Team"  placeholder="Choose a Sales Team" 
+                                        options={salesRepDirectorOptions}  value={formData.intorducedByIds}  onchange={handleInputChange}>
+                                    </lightning-combobox>
+                                    <!--<lightning-dual-listbox data-id="intorducedByIds"  label="Introduced by"  placeholder="Choose a Introduced by" 
+                                        options={salesRepDirectorOptions} size="3" value={formData.intorducedByIds}  onchange={handleInputChange}>
+                                    </lightning-dual-listbox>-->
+                                </div>
+                                <!-- Show input field when 'Other' is selected -->
+                                <template if:true={showOtherInput}>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text" label="Marketing Channel/Details" placeholder="Marketing Channel/Details"  field-level-help="How did you hear about us"
+                                            value={otherIntroducedBy} data-id="otherIntroducedBy"  onchange={handleInputChange}>
+                                        </lightning-input>
+                                    </div>
+                                </template>
+
+                               
+                            </div>
+                        </lightning-accordion-section>  
+
+
+                        <lightning-accordion-section name="F" label="Company Personnel">
+                            <!-- OWNER SECTION -->
+                            <div class="slds-p-around_medium">
+                                <h2 class="slds-text-title_bold slds-m-bottom_small">Owner</h2>
+                                
+                                <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text" pattern="^[a-zA-Z\s]*$" placeholder="Owner First Name" label="Owner First Name"
+                                            value={ownerFirstName} data-id="ownerFirstName" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text" pattern="^[a-zA-Z\s]*$" placeholder="Owner Last Name" label="Owner Last Name"
+                                            value={ownerLastName} data-id="ownerLastName" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="email" placeholder="Owner Email" label="Owner Email"
+                                            value={ownerEmail} data-id="ownerEmail" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <!--<template if:true={internationLocation}>-->
+                                            <div class="slds-grid slds-gutters">
+                                                <div class="slds-col slds-size_1-of-3">
+                                            
+                                                    <lightning-combobox data-id="ownerMobileCountryCode"  label="Country Code"  placeholder="Choose a Country Code"  required
+                                                        options={countryCodeOptions}  value={ownerMobileCountryCode}  onchange={handleInputChange}>
+                                                    </lightning-combobox>
+                                                </div>
+                                            
+                                                <div class="slds-col slds-size_2-of-3">
+                                                    <lightning-input pattern="[0-9]{9}"  placeholder="Owner Mobile Number(9 digit)" label="Owner Mobile Number"
+                                            value={ownerMobileNumber} data-id="ownerMobileNumber" onchange={handleInputChange} required></lightning-input>
+                                                </div>
+                                            </div>
+                                       <!-- </template>
+                                        <template if:false={internationLocation}>
+                                            <lightning-input pattern="[0-9]{1,25}"  placeholder="Owner Mobile Number" label="Owner Mobile Number"
+                                            value={ownerMobileNumber} data-id="ownerMobileNumber" onchange={handleInputChange} required></lightning-input>
+                                        </template>-->
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text"  placeholder="Designation" label="Designation"
+                                            value={designation} data-id="designation" onchange={handleInputChange} ></lightning-input>
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2"> 
+                                        <template if:true={allNationalityOptions}>
+                                            <lightning-combobox
+                                                label="Nationality"
+                                                data-id="nationality"
+                                                value={formData.nationality}
+                                                placeholder="Select Nationality"
+                                                options={allNationalityOptions}
+                                                onchange={handleInputChange}
+                                                required>
+                                            </lightning-combobox>
+                                        </template>
+                                    </div>
+
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="file" data-id="passportCopy"
+                                            accept={allowedFileTypes} required multiple
+                                            label="Passport Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                    
+                                        <template if:true={checkpassportCopy}>
+                                            <span style="color:green">Passport Copy Uploaded</span>
+                                        </template>
+                                        <template if:true={errorpassportCopy}>
+                                            <div style="color:red;font-weight: bold;">{errorpassportCopyDoc}</div>
+                                        </template>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input  type="date" placeholder="Passport Expiry Date" label="Passport Expiry Date"
+                                                min={today} value={passportExpiryDate} data-id="passportExpiryDate" onchange={handleInputChange} required></lightning-input>
+                                    </div>
+
+                                    <template if:false={internationLocation}>
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <label class="slds-form-element__label" for="emiratesIDCopy">
+                                                <template if:false={internationLocation}><abbr class="slds-required" title="required">*</abbr></template> Emirates ID Copy
+                                            </label>
+                                            <lightning-input type="file" data-id="emiratesIDCopy" variant="label-hidden"
+                                                accept={allowedFileTypes} multiple
+                                                label="Emirates ID Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                        
+                                            <template if:true={checkemiratesIDCopy}>
+                                                <span style="color:green">Emirates ID Copy Uploaded</span>
+                                            </template>
+                                            <template if:true={erroremiratesIDCopy}>
+                                                <div style="color:red;font-weight: bold;">{erroremiratesIDCopyDoc}</div>
+                                            </template>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <label class="slds-form-element__label" for="emiratesIDExpiryDate">
+                                                <template if:false={internationLocation}><abbr class="slds-required" title="required">*</abbr></template> Emirates ID Expiry Date
+                                            </label>
+                                            <lightning-input  type="date" placeholder="Emirates ID Expiry Date" label="Emirates ID Expiry Date" variant="label-hidden"
+                                                    min={today} value={emiratesIDExpiryDate} data-id="emiratesIDExpiryDate" onchange={handleInputChange} ></lightning-input>
+                                        </div>
+                                    </template>
+
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="file" data-id="visaCopy"
+                                            accept={allowedFileTypes} multiple
+                                            label="Visa Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                    
+                                        <template if:true={checkvisaCopy}>
+                                            <span style="color:green">Visa Copy Copy Uploaded</span>
+                                        </template>
+                                        <template if:true={errorvisaCopy}>
+                                            <div style="color:red;font-weight: bold;">{errorvisaCopyDoc}</div>
+                                        </template>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text"  placeholder="Signatory Name" label="Signatory Name" required
+                                            value={signatoryName} data-id="signatoryName" onchange={handleInputChange} ></lightning-input>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <!-- MANAGER SECTION -->
+                            </br>
+                            <div class="slds-p-around_medium slds-border_top">
+                                <h2 class="slds-text-title_bold slds-m-bottom_small">Manager</h2>
+                               
+                                <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text" pattern="^[a-zA-Z\s]*$" placeholder="Manager First Name" label="Manager First Name"
+                                            value={managerFirstName} data-id="managerFirstName" onchange={handleInputChange} ></lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text" pattern="^[a-zA-Z\s]*$" placeholder="Manager Last Name" label="Manager Last Name"
+                                            value={managerLastName} data-id="managerLastName" onchange={handleInputChange} ></lightning-input>
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="email" placeholder="Manager Email" label="Manager Email"
+                                            value={managerEmail} data-id="managerEmail" onchange={handleInputChange} ></lightning-input>
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <!--<template if:true={internationLocation}>-->
+                                            <div class="slds-grid slds-gutters">
+                                                <div class="slds-col slds-size_1-of-3">
+                                                    <lightning-combobox data-id="managerMobileCountryCode" label="Country Code" placeholder="Choose a Country Code"
+                                                        options={countryCodeOptions} value={managerMobileCountryCode} onchange={handleInputChange}>
+                                                    </lightning-combobox>
+                                                </div>
+                                                <div class="slds-col slds-size_2-of-3">
+                                                    <lightning-input pattern="[0-9]{9}" placeholder="Manager Mobile Number(9 digit)" label="Manager Mobile Number"
+                                                        value={managerMobileNumber} data-id="managerMobileNumber" onchange={handleInputChange} ></lightning-input>
+                                                </div>
+                                            </div>
+                                        <!--</template>
+                                        <template if:false={internationLocation}>
+                                            <lightning-input pattern="[0-9]{1,25}" placeholder="Manager Mobile Number" label="Manager Mobile Number"
+                                                value={managerMobileNumber} data-id="managerMobileNumber" onchange={handleInputChange} ></lightning-input>
+                                        </template>-->
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text" placeholder="Designation" label="Designation"
+                                            value={managerDesignation} data-id="managerDesignation" onchange={handleInputChange}></lightning-input>
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <template if:true={allNationalityOptions}>
+                                            <lightning-combobox label="Nationality" data-id="managerNationality"
+                                                value={managerNationality} placeholder="Select Nationality"
+                                                options={allNationalityOptions} onchange={handleInputChange} >
+                                            </lightning-combobox>
+                                        </template>
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="file" data-id="managerPassportCopy" accept={allowedFileTypes}  multiple
+                                            label="Passport Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+
+                                        <template if:true={checkmanagerPassportCopy}>
+                                            <span style="color:green">Passport Copy Uploaded</span>
+                                        </template>
+                                        <template if:true={errormanagerPassportCopy}>
+                                            <div style="color:red;font-weight: bold;">{errormanagerPassportCopyDoc}</div>
+                                        </template>
+                                    </div>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="date" placeholder="Passport Expiry Date" label="Passport Expiry Date"
+                                            min={today} value={managerPassportExpiryDate} data-id="managerPassportExpiryDate" onchange={handleInputChange} ></lightning-input>
+                                    </div>
+
+                                    <template if:false={internationLocation}>
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <label class="slds-form-element__label" for="managerEmiratesIDCopy">
+                                                <!--<abbr class="slds-required" title="required">*</abbr>--> Emirates ID Copy
+                                            </label>
+                                            <lightning-input type="file" data-id="managerEmiratesIDCopy" variant="label-hidden"
+                                                accept={allowedFileTypes} multiple label="Emirates ID Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+
+                                            <template if:true={checkmanagerEmiratesIDCopy}>
+                                                <span style="color:green">Emirates ID Copy Uploaded</span>
+                                            </template>
+                                            <template if:true={errormanagerEmiratesIDCopy}>
+                                                <div style="color:red;font-weight: bold;">{errormanagerEmiratesIDCopyDoc}</div>
+                                            </template>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <label class="slds-form-element__label" for="managerEmiratesIDExpiryDate">
+                                               <!-- <abbr class="slds-required" title="required">*</abbr> --> Emirates ID Expiry Date
+                                            </label>
+                                            <lightning-input type="date" placeholder="Emirates ID Expiry Date" label="Emirates ID Expiry Date" variant="label-hidden"
+                                                min={today} value={managerEmiratesIDExpiryDate} data-id="managerEmiratesIDExpiryDate" onchange={handleInputChange}></lightning-input>
+                                        </div>
+                                    </template>
+
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="file" data-id="managerVisaCopy" accept={allowedFileTypes} multiple
+                                            label="Visa Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+
+                                        <template if:true={checkmanagerVisaCopy}>
+                                            <span style="color:green">Visa Copy Uploaded</span>
+                                        </template>
+                                        <template if:true={errormanagerVisaCopy}>
+                                            <div style="color:red;font-weight: bold;">{errormanagerVisaCopyDoc}</div>
+                                        </template>
+                                    </div>
+
+                                    <!--<div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="text" placeholder="Signatory Name" label="Signatory Name" required
+                                            value={managerSignatoryName} data-id="managerSignatoryName" onchange={handleInputChange}></lightning-input>
+                                    </div>-->
+                                </div>
+
+                            </div>
+                           
+                        </lightning-accordion-section>  
+
+
+                    </lightning-accordion>
+                    
+                    <div class="slds-m-around_medium">
+                        <div class="slds-grid slds-gutters slds-align-items-start">
+                            
+                            <!-- Checkbox on the left -->
+                            <div class="slds-col slds-size_1-of-12 slds-p-right_small">
+                                <lightning-input 
+                                    type="checkbox" 
+                                    name="termsAndConditions" 
+                                    data-id="disclaimer" 
+                                    onchange={handleInputChange} 
+                                    required>
+                                </lightning-input>
+                            </div>
+                
+                            <!-- Disclaimer text on the right -->
+                            <div class="slds-col slds-size_11-of-12">
+                                <p class="disclaimer-text">{disclaimerText}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <span>
+                    <template if:true={showError}>
+                        <div class="error">
+                            <lightning-formatted-rich-text style="color:red; font-size:16px; font-weight: bold;" value={errorMessage}></lightning-formatted-rich-text>
+                        </div>
+                    </template>
+                    <br/>
+                </span>
+
+
+                <div class="buttons">
+                    <template if:false={checkRequetsSubmitted}>
+                        <button class="continue" onclick={handleCreateBroker}>SUBMIT</button>
+                    </template>
+                </div>
+            </template>
+
+            <template if:true={showSuccessPage}>
+                <div class="slds-p-around_large slds-text-align_center">
+                    <h2 style="margin-top: 150px; font-size: 20px; font-weight: bold;">
+                        You have successfully submitted your form. We are currently reviewing your documents.
+                    </h2>
+            
+                    <div class="slds-m-top_xx-large slds-text-align_left" style="max-width: 600px; margin: 40px auto 0;">
+                        <h3 style="font-size: 18px; font-weight: bold;">For any inquiries, don't hesitate to contact the agency admins:</h3>
+                        
+                        <div class="slds-m-top_medium">
+                            <p style="font-weight: bold;">Abu Dhabi:</p>
+                            <p>Raouf Zaidi<br/>
+                                Business Development Manager<br/>
+                                <a href="tel:+971551275519">00971 551275519</a><br/>
+                                <a href="mailto:rzaidi@ora-uae.com">rzaidi@ora-uae.com</a>
+                            </p>
+                        </div>
+            
+                        <div class="slds-m-top_medium">
+                            <p style="font-weight: bold;">Dubai:</p>
+                            <p>Ajna Lipovic<br/>
+                                Broker Management Operations Specialist<br/>
+                                <a href="tel:+971521068502">00971 521068502</a><br/>
+                                <a href="mailto:alipovic@ora-uae.com">alipovic@ora-uae.com</a>
+                            </p>
+            
+                            <p class="slds-m-top_small">Enass Abdelbaset<br/>
+                                Head of Broker Management<br/>
+                                <a href="mailto:eabdelbaset@ora-uae.com">eabdelbaset@ora-uae.com</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </template>
+        </div>
+    </div>
+</template>

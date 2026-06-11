@@ -1,0 +1,217 @@
+:host {
+    display: block;
+    font-family: 'URW Geometric', 'Public Sans', sans-serif;
+    color: #262626;
+    font-size: 16px;
+}
+
+
+.container {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+}
+
+.logo-container {
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.logo {
+    max-width: 180px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.sidebar {
+    width: 25%;
+    background-color: #ffffff;
+    padding: 2rem;
+    box-shadow: 2px 0 5px #b5b5b5;
+    border-right: 1px solid #b5b5b5;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
+.sidebar h2 {
+    font-size: 20px;
+    font-weight: normal;
+    color: #262626;
+}
+
+.sidebar p {
+    font-size: 16px;
+    color: #262626;
+}
+
+
+.content {
+    width: 70%;
+    padding: 3rem;
+    overflow-y: auto; /* Enables scrolling for long content */
+    flex-grow: 1;
+}
+
+
+
+.title {
+    font-size: 20px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color:#262626;
+    text-align: left;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #262626;
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.row {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.row lightning-input {
+    flex: 1;
+}
+
+.buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+}
+
+.cancel {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.continue {
+    background: #ea8b6e;
+    text-transform: uppercase;
+    color: #ffffff;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-weight: bold;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.continue:hover {
+    background: #e3cba8;
+}
+
+.login-text {
+    font-size: 16px; 
+    color: #262626; 
+    font-weight: 400; 
+    letter-spacing: 0.5px;
+}
+
+a.login-link,
+.login-link {
+    font-weight: 700;
+    text-decoration: none;
+    color: #ea8b6e !important;
+}
+
+a.login-link:hover,
+.login-link:hover {
+    color: #e3cba8 !important;
+    text-decoration: underline;
+}
+
+
+.spinner-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.spinner-overlay {
+    background-color: #b5b5b5; /* Darker background */
+    padding: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media screen and (max-width: 1024px) {
+    .container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        text-align: center;
+        padding: 2rem;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        
+    }
+
+    .content {
+        width: 100%;
+        padding: 2rem;
+    }
+
+    .row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .buttons {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .continue {
+        width: 100%;
+        text-align: center;
+    }
+
+    .login-text {
+        font-size: 20px; 
+        color: #6D6D6D; 
+        font-weight: 400; 
+        letter-spacing: 0.5px;
+    }
+    
+    .login-link {
+        font-weight: 700;
+        text-decoration: none;
+        color: #3E3E3E; 
+    }
+    
+    .login-link:hover {
+        text-decoration: underline;
+    }
+    
+}
