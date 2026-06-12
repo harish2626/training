@@ -205,7 +205,7 @@
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="file" data-id="POACopy" required
                                         accept={allowedFileTypes}  style="margin-bottom: 1px;"
-                                        label="POA Copy" onchange={handleFileUpload}></lightning-input>
+                                        label="Attested Power of Attorney for authorized signatory Copy" onchange={handleFileUpload}></lightning-input>
                                     <template if:true={checkPOACopy}>
                                         <span style="color:green">POA Copy Uploaded</span>
                                     </template>
@@ -496,8 +496,10 @@
 
 
                         <lightning-accordion-section name="F" label="Company Personnel">
+                            
                             <!-- OWNER SECTION -->
-                            <div class="slds-p-around_medium">
+                                <div class="slds-p-around_medium">
+                                  
                                 <h2 class="slds-text-title_bold slds-m-bottom_small">Owner</h2>
                                 
                                 <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
@@ -617,126 +619,245 @@
                                             value={signatoryName} data-id="signatoryName" onchange={handleInputChange} ></lightning-input>
                                     </div>
 
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="file" data-id="amlPolicy"
+                                            accept={allowedFileTypes}
+                                            label="AML policy / AML-CFT programme (latest version)"
+                                            onchange={handleFileUpload}
+                                            style="margin-bottom: 1px;">
+                                        </lightning-input>
+                                        <template if:true={checkamlPolicy}>
+                                            <span style="color:green">AML Policy selected</span>
+                                        </template>
+                                        <template if:true={erroramlPolicy}>
+                                            <div style="color:red;font-weight: bold;">{erroramlPolicyDoc}</div>
+                                        </template>
+                                    </div>
+
                                 </div>
 
                             </div>
 
-                            <!-- MANAGER SECTION -->
-                            </br>
-                            <div class="slds-p-around_medium slds-border_top">
-                                <h2 class="slds-text-title_bold slds-m-bottom_small">Manager</h2>
-                               
-                                <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="text" pattern="^[a-zA-Z\s]*$" placeholder="Manager First Name" label="Manager First Name"
-                                            value={managerFirstName} data-id="managerFirstName" onchange={handleInputChange} ></lightning-input>
-                                    </div>
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="text" pattern="^[a-zA-Z\s]*$" placeholder="Manager Last Name" label="Manager Last Name"
-                                            value={managerLastName} data-id="managerLastName" onchange={handleInputChange} ></lightning-input>
+                                <div class="slds-p-around_medium">
+                                    <div class="slds-grid slds-align_absolute-center slds-m-bottom_medium">
+                                        <lightning-button label="Add New Company Personnel"
+                                            variant="brand"
+                                            onclick={handleAddPersonnel}>
+                                        </lightning-button>
                                     </div>
 
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="email" placeholder="Manager Email" label="Manager Email"
-                                            value={managerEmail} data-id="managerEmail" onchange={handleInputChange} ></lightning-input>
-                                    </div>
-
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <!--<template if:true={internationLocation}>-->
-                                            <div class="slds-grid slds-gutters">
-                                                <div class="slds-col slds-size_1-of-3">
-                                                    <lightning-combobox data-id="managerMobileCountryCode" label="Country Code" placeholder="Choose a Country Code"
-                                                        options={countryCodeOptions} value={managerMobileCountryCode} onchange={handleInputChange}>
-                                                    </lightning-combobox>
+                                    <template if:true={personnel.length}>
+                                        <template for:each={personnel} for:item="person" for:index="index">
+                                            <div key={person.id} class="slds-box slds-m-bottom_medium">
+                                                <div class="slds-grid slds-align-spread slds-m-bottom_small">
+                                                    <h3 class="slds-text-heading_small">{person.sectionLabel}</h3>
+                                                    <lightning-button-icon icon-name="utility:close"
+                                                        alternative-text="Remove"
+                                                        title="Remove personnel"
+                                                        onclick={handleRemovePersonnel}
+                                                        data-id={person.id}>
+                                                    </lightning-button-icon>
                                                 </div>
-                                                <div class="slds-col slds-size_2-of-3">
-                                                    <lightning-input pattern="[0-9]{9}" placeholder="Manager Mobile Number(9 digit)" label="Manager Mobile Number"
-                                                        value={managerMobileNumber} data-id="managerMobileNumber" onchange={handleInputChange} ></lightning-input>
+
+                                                <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-combobox label="Person Type"
+                                                            placeholder="Select Person Type"
+                                                            data-id={person.id}
+                                                            data-field="personType"
+                                                            value={person.personType}
+                                                            options={personTypeOptions}
+                                                            onchange={handlePersonnelChange}
+                                                            required>
+                                                        </lightning-combobox>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-combobox label="Same as person"
+                                                            placeholder="Select same person"
+                                                            data-id={person.id}
+                                                            data-field="sameAsPerson"
+                                                            value={person.sameAsPerson}
+                                                            options={person.sameAsOptions}
+                                                            onchange={handlePersonnelChange}>
+                                                        </lightning-combobox>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="text" label="First Name"
+                                                            data-id={person.id}
+                                                            data-field="firstName"
+                                                            value={person.firstName}
+                                                            onchange={handlePersonnelChange}
+                                                            disabled={person.isSameAs}
+                                                            required>
+                                                        </lightning-input>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="text" label="Last Name"
+                                                            data-id={person.id}
+                                                            data-field="lastName"
+                                                            value={person.lastName}
+                                                            onchange={handlePersonnelChange}
+                                                            disabled={person.isSameAs}
+                                                            required>
+                                                        </lightning-input>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="email" label="Email"
+                                                            data-id={person.id}
+                                                            data-field="email"
+                                                            value={person.email}
+                                                            onchange={handlePersonnelChange}
+                                                            disabled={person.isSameAs}>
+                                                        </lightning-input>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <div class="slds-grid slds-gutters">
+                                                            <div class="slds-col slds-size_1-of-3">
+                                                                <lightning-combobox data-id={person.id}
+                                                                    data-field="mobileCountryCode"
+                                                                    label="Country Code"
+                                                                    placeholder="Choose a Country Code"
+                                                                    options={countryCodeOptions}
+                                                                    value={person.mobileCountryCode}
+                                                                    onchange={handlePersonnelChange}
+                                                                    disabled={person.isSameAs}>
+                                                                </lightning-combobox>
+                                                            </div>
+                                                            <div class="slds-col slds-size_2-of-3">
+                                                                <lightning-input pattern="[0-9]{9}"
+                                                                    placeholder="Mobile Number"
+                                                                    label="Mobile Number"
+                                                                    value={person.mobileNumber}
+                                                                    data-id={person.id}
+                                                                    data-field="mobileNumber"
+                                                                    onchange={handlePersonnelChange}
+                                                                    disabled={person.isSameAs}>
+                                                                </lightning-input>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="text" label="Designation"
+                                                            data-id={person.id}
+                                                            data-field="designation"
+                                                            value={person.designation}
+                                                            onchange={handlePersonnelChange}
+                                                            disabled={person.isSameAs}>
+                                                        </lightning-input>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <template if:true={allNationalityOptions}>
+                                                            <lightning-combobox label="Nationality"
+                                                                data-id={person.id}
+                                                                data-field="nationality"
+                                                                value={person.nationality}
+                                                                placeholder="Select Nationality"
+                                                                options={allNationalityOptions}
+                                                                onchange={handlePersonnelChange}
+                                                                disabled={person.isSameAs}>
+                                                            </lightning-combobox>
+                                                        </template>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="date" label="Passport Expiry Date"
+                                                            data-id={person.id}
+                                                            data-field="passportExpiryDate"
+                                                            value={person.passportExpiryDate}
+                                                            onchange={handlePersonnelChange}
+                                                            disabled={person.isSameAs}>
+                                                        </lightning-input>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="date" label="Emirates ID Expiry Date"
+                                                            data-id={person.id}
+                                                            data-field="emiratesIDExpiryDate"
+                                                            value={person.emiratesIDExpiryDate}
+                                                            onchange={handlePersonnelChange}
+                                                            disabled={person.isSameAs}>
+                                                        </lightning-input>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="file"
+                                                            data-id={person.id}
+                                                            data-personid={person.id}
+                                                            data-field="passportCopy"
+                                                            accept={allowedFileTypes}
+                                                            label="Passport Copy"
+                                                            onchange={handlePersonnelFileUpload}
+                                                            disabled={person.isSameAs}
+                                                            style="margin-bottom: 1px;">
+                                                        </lightning-input>
+                                                        <template if:true={person.passportCopy}>
+                                                            <span style="color:green">Passport Copy selected</span>
+                                                        </template>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="file"
+                                                            data-id={person.id}
+                                                            data-personid={person.id}
+                                                            data-field="emiratesIDCopy"
+                                                            accept={allowedFileTypes}
+                                                            label="Emirates ID Copy"
+                                                            onchange={handlePersonnelFileUpload}
+                                                            disabled={person.isSameAs}
+                                                            style="margin-bottom: 1px;">
+                                                        </lightning-input>
+                                                        <template if:true={person.emiratesIDCopy}>
+                                                            <span style="color:green">Emirates ID Copy selected</span>
+                                                        </template>
+                                                    </div>
+
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="file"
+                                                            data-id={person.id}
+                                                            data-personid={person.id}
+                                                            data-field="visaCopy"
+                                                            accept={allowedFileTypes}
+                                                            label="Visa Copy"
+                                                            onchange={handlePersonnelFileUpload}
+                                                            disabled={person.isSameAs}
+                                                            style="margin-bottom: 1px;">
+                                                        </lightning-input>
+                                                        <template if:true={person.visaCopy}>
+                                                            <span style="color:green">Visa Copy selected</span>
+                                                        </template>
+                                                    </div>
+                                                    <div class="slds-col slds-size_1-of-2">
+                                                        <lightning-input type="file"
+                                                            data-id={person.id}
+                                                            data-personid={person.id}
+                                                            data-field="amlPolicy"
+                                                            accept={allowedFileTypes}
+                                                            label="AML policy / AML-CFT programme (latest version)"
+                                                            onchange={handlePersonnelFileUpload}
+                                                            disabled={person.isSameAs}
+                                                            style="margin-bottom: 1px;">
+                                                        </lightning-input>
+                                                        <template if:true={person.amlPolicy}>
+                                                            <span style="color:green">AML Policy selected</span>
+                                                        </template>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        <!--</template>
-                                        <template if:false={internationLocation}>
-                                            <lightning-input pattern="[0-9]{1,25}" placeholder="Manager Mobile Number" label="Manager Mobile Number"
-                                                value={managerMobileNumber} data-id="managerMobileNumber" onchange={handleInputChange} ></lightning-input>
-                                        </template>-->
-                                    </div>
-
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="text" placeholder="Designation" label="Designation"
-                                            value={managerDesignation} data-id="managerDesignation" onchange={handleInputChange}></lightning-input>
-                                    </div>
-
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <template if:true={allNationalityOptions}>
-                                            <lightning-combobox label="Nationality" data-id="managerNationality"
-                                                value={managerNationality} placeholder="Select Nationality"
-                                                options={allNationalityOptions} onchange={handleInputChange} >
-                                            </lightning-combobox>
                                         </template>
-                                    </div>
-
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="file" data-id="managerPassportCopy" accept={allowedFileTypes}  multiple
-                                            label="Passport Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
-
-                                        <template if:true={checkmanagerPassportCopy}>
-                                            <span style="color:green">Passport Copy Uploaded</span>
-                                        </template>
-                                        <template if:true={errormanagerPassportCopy}>
-                                            <div style="color:red;font-weight: bold;">{errormanagerPassportCopyDoc}</div>
-                                        </template>
-                                    </div>
-
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="date" placeholder="Passport Expiry Date" label="Passport Expiry Date"
-                                            min={today} value={managerPassportExpiryDate} data-id="managerPassportExpiryDate" onchange={handleInputChange} ></lightning-input>
-                                    </div>
-
-                                    <template if:false={internationLocation}>
-                                        <div class="slds-col slds-size_1-of-2">
-                                            <label class="slds-form-element__label" for="managerEmiratesIDCopy">
-                                                <!--<abbr class="slds-required" title="required">*</abbr>--> Emirates ID Copy
-                                            </label>
-                                            <lightning-input type="file" data-id="managerEmiratesIDCopy" variant="label-hidden"
-                                                accept={allowedFileTypes} multiple label="Emirates ID Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
-
-                                            <template if:true={checkmanagerEmiratesIDCopy}>
-                                                <span style="color:green">Emirates ID Copy Uploaded</span>
-                                            </template>
-                                            <template if:true={errormanagerEmiratesIDCopy}>
-                                                <div style="color:red;font-weight: bold;">{errormanagerEmiratesIDCopyDoc}</div>
-                                            </template>
-                                        </div>
-                                        <div class="slds-col slds-size_1-of-2">
-                                            <label class="slds-form-element__label" for="managerEmiratesIDExpiryDate">
-                                               <!-- <abbr class="slds-required" title="required">*</abbr> --> Emirates ID Expiry Date
-                                            </label>
-                                            <lightning-input type="date" placeholder="Emirates ID Expiry Date" label="Emirates ID Expiry Date" variant="label-hidden"
-                                                min={today} value={managerEmiratesIDExpiryDate} data-id="managerEmiratesIDExpiryDate" onchange={handleInputChange}></lightning-input>
-                                        </div>
                                     </template>
 
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="file" data-id="managerVisaCopy" accept={allowedFileTypes} multiple
-                                            label="Visa Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
-
-                                        <template if:true={checkmanagerVisaCopy}>
-                                            <span style="color:green">Visa Copy Uploaded</span>
-                                        </template>
-                                        <template if:true={errormanagerVisaCopy}>
-                                            <div style="color:red;font-weight: bold;">{errormanagerVisaCopyDoc}</div>
-                                        </template>
-                                    </div>
-
-                                    <!--<div class="slds-col slds-size_1-of-2">
-                                        <lightning-input type="text" placeholder="Signatory Name" label="Signatory Name" required
-                                            value={managerSignatoryName} data-id="managerSignatoryName" onchange={handleInputChange}></lightning-input>
-                                    </div>-->
+                                    <template if:false={personnel.length}>
+                                        <p class="slds-text-body_regular"> Please add all directors/managers, authorized signatories, and Ultimate beneficial owners (UBOs) holding ≥25% ownership or control; if the same person holds more than one role, please select “Same as person” and select the person. Valid passport copies, Emirates ID (where applicable), and proof of address must be submitted for all individuals listed above.</p>
+                                    </template>
                                 </div>
-
-                            </div>
-                           
-                        </lightning-accordion-section>  
+                            </lightning-accordion-section>
 
 
                     </lightning-accordion>

@@ -22,7 +22,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
     @api disclaimer;
     @track isdisclaimerChecked = false;
-    @track disclaimerText = 'The submission of the information in this form does not constitute an agreement or commitment by ORA (“us” or “we”) in any way. By submitting the information in this form, you confirm that you are not entitled to, and should not, use or utilize the name of ORA, ORA Q, or any of their respective affiliates, officers, or directors in any manner whatsoever. Additionally, you are not permitted to carry out any real estate or real estate marketing activities on our behalf. We collect and use the data provided in this form internally, in accordance with applicable laws. By submitting this form, you also confirm that all information provided is true, accurate, and complete.';
+    @track disclaimerText = 'The submission of the information in this form does not constitute an agreement or commitment by ORA (“us” or “we”) in any way. By submitting the information in this form, you confirm that you are not entitled to, and should not, use or utilize the name of ORA, ORA Q, or any of their respective affiliates, officers, or directors in any manner whatsoever. Additionally, you are not permitted to carry out any real estate or real estate marketing activities on our behalf. By submitting this form, you also confirm that all information provided is true, accurate, and complete.';
 
     @track formData = {
         agencyLocation : '',
@@ -129,6 +129,10 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     errorpassportCopy = false;
     errorpassportCopyDoc = '';
 
+    checkamlPolicy = false;
+    erroramlPolicy = false;
+    erroramlPolicyDoc = '';
+
     checkemiratesIDCopy = false;
     erroremiratesIDCopy = false;
     erroremiratesIDCopyDoc = '';
@@ -150,7 +154,13 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     errormanagerVisaCopyDoc = '';
 
     @track managers = [];
+    @track personnel = [];
 
+    personTypeOptions = [
+        { label: 'Directors/Managers', value: 'Directors/Managers' },
+        { label: 'Authorized signatories', value: 'Authorized signatories' },
+        { label: 'Ultimate beneficial owners (UBOs) holding ≥25% ownership or control', value: 'UBO' }
+    ];
 
     allowedFileTypes = '.png, .jpg, .jpeg, .pdf';       // Allowed file extensions
     allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
@@ -394,8 +404,12 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             this.internationLocation = (value === 'International Agency');
             return;
         }
-        
 
+        if (['ownerFirstName', 'ownerLastName', 'ownerEmail', 'ownerMobileCountryCode', 'ownerMobileNumber', 'designation', 'nationality', 'passportExpiryDate', 'emiratesIDExpiryDate'].includes(field)) {
+            this.refreshSameAsCopies();
+            this.updatePersonnelSameAsOptions();
+        }
+        
         // Check License Number
         if (field === 'tradeLicenseNumber') {
             this.checkTradeLNumber = false;
@@ -428,7 +442,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     }
 
     handleFileUpload(event) {
-        const maxSize = 5 * 1024 * 1024; // 5 MB in bytes
+       const maxSize = 5 * 1024 * 1024; // 5 MB in bytes
         const field = event.target.dataset.id; 
     
         if (!event.target.files || event.target.files.length === 0) return; 
@@ -483,6 +497,244 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         console.log('OUTPUT Final selectedMultiFiles:', JSON.stringify(this.selectedMultiFiles));
     }
 
+    handlePersonnelChange(event) {
+        const personId = event.target.dataset.id;
+        const field = event.target.dataset.field;
+        const value = event.target.value;
+        if (!personId || !field) {
+            return;
+        }
+
+        const personIndex = this.personnel.findIndex(person => person.id === personId);
+        if (personIndex < 0) {
+            return;
+        }
+
+        const person = { ...this.personnel[personIndex], [field]: value };
+
+        if (field === 'sameAsPerson') {
+            if (!value) {
+                person.isSameAs = false;
+            } else {
+                const source = this.getPersonnelSourceById(value);
+                if (source) {
+                    Object.assign(person, this.getSameAsValues(source));
+                    person.isSameAs = true;
+                }
+            }
+        }
+
+        const updated = [...this.personnel];
+        updated[personIndex] = person;
+        this.personnel = updated;
+        this.refreshSameAsCopies();
+        this.updatePersonnelSameAsOptions();
+    }
+
+    handlePersonnelFileUpload(event) {
+        const personId = event.target.dataset.personid;
+        const field = event.target.dataset.field;
+        if (!personId || !field || !event.target.files.length) {
+            return;
+        }
+
+        const personIndex = this.personnel.findIndex(person => person.id === personId);
+        if (personIndex < 0) {
+            return;
+        }
+
+        const file = event.target.files[0];
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const maxSize = 5 * 1024 * 1024;
+
+        if (!this.allowedExtensions.includes(fileExtension)) {
+            event.target.value = '';
+            return;
+        }
+
+        if (file.size > maxSize) {
+            event.target.value = '';
+            return;
+        }
+
+        const baseFileName = this.getFileName(field, fileExtension);
+        const uniqueSuffix = `${Date.now()}_${personId}`;
+        const filename = `${baseFileName}_${uniqueSuffix}.${fileExtension}`;
+
+        const updatedPerson = {
+            ...this.personnel[personIndex],
+            [field]: {
+                filename,
+                fileContent: file
+            }
+        };
+
+        const updated = [...this.personnel];
+        updated[personIndex] = updatedPerson;
+        this.personnel = updated;
+
+        const fileKey = `${personId}-${field}`;
+        this.selectedMultiFiles = [
+            ...this.selectedMultiFiles.filter(f => f.key !== fileKey),
+            {
+                key: fileKey,
+                filename,
+                fileContent: file
+            }
+        ];
+    }
+
+    buildInputData() {
+        return {
+            ...this.formData,
+            personnel: this.personnel.map(person => ({
+                id: person.id,
+                personType: person.personType,
+                sameAsPerson: person.sameAsPerson,
+                firstName: person.firstName,
+                lastName: person.lastName,
+                email: person.email,
+                mobileCountryCode: person.mobileCountryCode,
+                mobileNumber: person.mobileNumber,
+                designation: person.designation,
+                nationality: person.nationality,
+                passportExpiryDate: person.passportExpiryDate,
+                emiratesIDExpiryDate: person.emiratesIDExpiryDate
+            }))
+        };
+    }
+
+    validatePersonnelEntries() {
+        for (let person of this.personnel) {
+            if (!person.personType || person.personType.trim() === '') {
+                return 'All Person Type fields are required. Click on "Add New Company Personnel" to add more person types.';
+            }
+            if (!person.firstName || !person.lastName) {
+                return 'Please enter first name and last name for all added personnel.';
+            }
+            if (!person.email && !person.mobileNumber) {
+                return 'Please provide email or mobile number for all added personnel.';
+            }
+        }
+        return null;
+    }
+
+    handleAddPersonnel() {
+        const newPerson = {
+            id: `person-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            personType: '',
+            sameAsPerson: '',
+            sameAsOptions: [],
+            isSameAs: false,
+            firstName: '',
+            lastName: '',
+            email: '',
+            mobileCountryCode: '',
+            mobileNumber: '',
+            designation: '',
+            nationality: '',
+            passportExpiryDate: '',
+            emiratesIDExpiryDate: '',
+            passportCopy: null,
+            emiratesIDCopy: null,
+            visaCopy: null
+            ,amlPolicy: null
+        };
+        this.personnel = [...this.personnel, newPerson];
+        this.updatePersonnelSameAsOptions();
+    }
+
+    handleRemovePersonnel(event) {
+        const personId = event.target.dataset.id;
+        if (!personId) {
+            return;
+        }
+
+        this.personnel = this.personnel
+            .filter(person => person.id !== personId)
+            .map(person => {
+                if (person.sameAsPerson === personId) {
+                    return { ...person, sameAsPerson: '', isSameAs: false };
+                }
+                return person;
+            });
+
+        this.updatePersonnelSameAsOptions();
+    }
+
+    getPersonnelSourceById(id) {
+        if (id === 'owner') {
+            if (!this.formData.ownerFirstName && !this.formData.ownerLastName) {
+                return null;
+            }
+            return {
+                firstName: this.formData.ownerFirstName,
+                lastName: this.formData.ownerLastName,
+                email: this.formData.ownerEmail,
+                mobileCountryCode: this.formData.ownerMobileCountryCode,
+                mobileNumber: this.formData.ownerMobileNumber,
+                designation: this.formData.designation,
+                nationality: this.formData.nationality,
+                passportExpiryDate: this.formData.passportExpiryDate,
+                emiratesIDExpiryDate: this.formData.emiratesIDExpiryDate
+            };
+        }
+        return this.personnel.find(person => person.id === id) || null;
+    }
+
+    getSameAsValues(source) {
+        return {
+            firstName: source.firstName || '',
+            lastName: source.lastName || '',
+            email: source.email || '',
+            mobileCountryCode: source.mobileCountryCode || '',
+            mobileNumber: source.mobileNumber || '',
+            designation: source.designation || '',
+            nationality: source.nationality || '',
+            passportExpiryDate: source.passportExpiryDate || '',
+            emiratesIDExpiryDate: source.emiratesIDExpiryDate || ''
+        };
+    }
+
+    updatePersonnelSameAsOptions() {
+        const sourceOptions = [];
+        const ownerName = `${this.formData.ownerFirstName || ''} ${this.formData.ownerLastName || ''}`.trim();
+        if (ownerName) {
+            sourceOptions.push({ label: ownerName, value: 'owner' });
+        }
+
+        this.personnel.forEach(person => {
+            const fullName = `${person.firstName || ''} ${person.lastName || ''}`.trim();
+            if (fullName && !person.sameAsPerson) {
+                sourceOptions.push({ label: fullName, value: person.id });
+            }
+        });
+
+        this.personnel = this.personnel.map((person, index) => ({
+            ...person,
+            sectionLabel: `Personnel ${index + 1}`,
+            sameAsOptions: sourceOptions.filter(option => option.value !== person.id)
+        }));
+    }
+
+    refreshSameAsCopies() {
+        this.personnel = this.personnel.map(person => {
+            if (!person.sameAsPerson) {
+                return person;
+            }
+            const source = this.getPersonnelSourceById(person.sameAsPerson);
+            if (!source) {
+                return { ...person, sameAsPerson: '', isSameAs: false };
+            }
+            return {
+                ...person,
+                ...this.getSameAsValues(source),
+                isSameAs: true
+            };
+        });
+        this.updatePersonnelSameAsOptions();
+    }
+
     handleManagersUpdate(event) {
         this.managers = event.detail.managers;
         console.log('Managers updated:', this.managers);
@@ -502,7 +754,8 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             visaCopy: 'Visa Copy',
             managerPassportCopy: 'Manager Passport Copy',
             managerEmiratesIDCopy: 'Manager Emirates ID Copy',
-            managerVisaCopy: 'Manager Visa Copy'
+            managerVisaCopy: 'Manager Visa Copy',
+            amlPolicy: 'AML Policy'
         };
         return (fileNames[field] || 'Document.');
     }
@@ -529,7 +782,6 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
     // Create Broker Account
     handleCreateBroker() {
-
         console.log('OUTPUT this.formData : ' , this.formData);
         console.log('OUTPUT Uploaded Files:', JSON.stringify(this.selectedMultiFiles));
         this.Spinner = false;
@@ -752,6 +1004,13 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             return;
         }
 
+        const personnelValidationError = this.validatePersonnelEntries();
+        if (personnelValidationError) {
+            this.showError = true;
+            this.errorMessage = personnelValidationError;
+            return;
+        }
+
         // Date fields that must be in the future
         const futureDateFields = [
             { key: 'passportExpiryDate', label: 'Passport Expiry Date' },
@@ -802,9 +1061,18 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
         this.Spinner = true;
 
-        createBrokerAccount({ inputData: this.formData})
+        const inputData = this.buildInputData();
+        console.log('OUTPUT buildInputData:', JSON.stringify(inputData));
+        createBrokerAccount({ inputData })
         .then(result => {
             console.log('OUTPUT: ', result);
+            if (!result || typeof result !== 'string' || !/^([A-Za-z0-9]{15}|[A-Za-z0-9]{18})$/.test(result)) {
+                this.Spinner = false;
+                this.checkRequetsSubmitted = false;
+                this.showError = true;
+                this.errorMessage = `Broker creation failed: ${result}`;
+                return;
+            }
             this.checkRequetsSubmitted = true;
             // Process all files asynchronously and upload once all are ready
             this.processFiles()

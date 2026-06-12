@@ -83,6 +83,23 @@ global without sharing class  BrokerPortalController {
     
     
     
+    private static String mergePicklistValues(String existingValues, Set<String> valuesToAdd) {
+        Set<String> mergedValues = new Set<String>();
+        if (String.isNotBlank(existingValues)) {
+            for (String item : existingValues.split(';')) {
+                if (String.isNotBlank(item)) {
+                    mergedValues.add(item.trim());
+                }
+            }
+        }
+        for (String value : valuesToAdd) {
+            if (String.isNotBlank(value)) {
+                mergedValues.add(value.trim());
+            }
+        }
+        return mergedValues.isEmpty() ? '' : String.join(new List<String>(mergedValues), ';');
+    }
+
     @AuraEnabled
     public static void updateUserProfile(String email, String mobile) {
 
@@ -332,6 +349,9 @@ global without sharing class  BrokerPortalController {
             insert newAccount;
             
             list<Contact> conlist = new list<Contact>();
+            Map<String, Contact> sourceContactsByRowId = new Map<String, Contact>();
+            Map<String, Set<String>> sameAsRoleMap = new Map<String, Set<String>>();
+            Set<String> ownerExtraRoles = new Set<String>();
 
             Contact newContact = new Contact(
                 AccountId = newAccount.Id,
@@ -379,11 +399,105 @@ global without sharing class  BrokerPortalController {
                     Is_Manager__c = true
                 );
 
-
                 conlist.add(managerContact);
             }
 
+            if (inputData.containsKey('personnel') && inputData.get('personnel') != null) {
+                Object personnelObj = inputData.get('personnel');
+                List<Object> personnelList;
+                if (personnelObj instanceof List<Object>) {
+                    personnelList = (List<Object>) personnelObj;
+                } else {
+                    personnelList = (List<Object>) JSON.deserializeUntyped(JSON.serialize(personnelObj));
+                }
+
+                for (Object personObj : personnelList) {
+                    if (personObj == null) {
+                        continue;
+                    }
+                    Map<String, Object> personMap;
+                    if (personObj instanceof Map<String, Object>) {
+                        personMap = (Map<String, Object>) personObj;
+                    } else {
+                        personMap = (Map<String, Object>) JSON.deserializeUntyped(JSON.serialize(personObj));
+                    }
+
+                    String rowId = (String) personMap.get('id');
+                    String sameAsPerson = (String) personMap.get('sameAsPerson');
+                    String personType = (String) personMap.get('personType');
+
+                    if (String.isNotBlank(sameAsPerson)) {
+                        if (sameAsPerson == 'owner') {
+                            if (String.isNotBlank(personType)) {
+                                ownerExtraRoles.add(personType);
+                            }
+                        } else if (String.isNotBlank(personType)) {
+                            if (!sameAsRoleMap.containsKey(sameAsPerson)) {
+                                sameAsRoleMap.put(sameAsPerson, new Set<String>());
+                            }
+                            sameAsRoleMap.get(sameAsPerson).add(personType);
+                        }
+                        continue;
+                    }
+
+                    String firstName = (String) personMap.get('firstName');
+                    String lastName = (String) personMap.get('lastName');
+                    if (String.isBlank(firstName) && String.isBlank(lastName)) {
+                        continue;
+                    }
+
+                    Contact personContact = new Contact(
+                        AccountId = newAccount.Id,
+                        Company_Personal__c = (String) personMap.get('personType'),
+                        FirstName = firstName,
+                        LastName = lastName,
+                        Email = (String) personMap.get('email'),
+                        MobilePhone = (String) personMap.get('mobileNumber'),
+                        Status__c = 'Active',
+                        Owner_Mobile_Country_Code__c = (String) personMap.get('mobileCountryCode'),
+                        Nationality__c = (String) personMap.get('nationality'),
+                        Designation__c = (String) personMap.get('designation'),
+                        Passport_Expiry_Date__c = String.isNotBlank((String) personMap.get('passportExpiryDate'))
+                            ? Date.valueOf((String) personMap.get('passportExpiryDate'))
+                            : null,
+                        Emirates_ID_Expiry_Date__c = String.isNotBlank((String) personMap.get('emiratesIDExpiryDate'))
+                            ? Date.valueOf((String) personMap.get('emiratesIDExpiryDate'))
+                            : null
+                    );
+                    conlist.add(personContact);
+                    if (String.isNotBlank(rowId)) {
+                        sourceContactsByRowId.put(rowId, personContact);
+                    }
+                }
+            }
+
             insert conlist;
+
+            if (!sameAsRoleMap.isEmpty() || !ownerExtraRoles.isEmpty()) {
+                List<Contact> contactsToUpdate = new List<Contact>();
+                for (String sourceId : sameAsRoleMap.keySet()) {
+                    if (sourceContactsByRowId.containsKey(sourceId)) {
+                        Contact sourceContact = sourceContactsByRowId.get(sourceId);
+                        String mergedCompanyPersonal = mergePicklistValues(sourceContact.Company_Personal__c, sameAsRoleMap.get(sourceId));
+                        if (String.isNotBlank(mergedCompanyPersonal) && mergedCompanyPersonal != sourceContact.Company_Personal__c) {
+                            sourceContact.Company_Personal__c = mergedCompanyPersonal;
+                            contactsToUpdate.add(sourceContact);
+                        }
+                    }
+                }
+
+                if (!ownerExtraRoles.isEmpty()) {
+                    String mergedOwnerCompanyPersonal = mergePicklistValues(newContact.Company_Personal__c, ownerExtraRoles);
+                    if (String.isNotBlank(mergedOwnerCompanyPersonal) && mergedOwnerCompanyPersonal != newContact.Company_Personal__c) {
+                        newContact.Company_Personal__c = mergedOwnerCompanyPersonal;
+                        contactsToUpdate.add(newContact);
+                    }
+                }
+
+                if (!contactsToUpdate.isEmpty()) {
+                    update contactsToUpdate;
+                }
+            }
                                 
             if (introducedByIds!=null) {
                 Introduced_By__c introduced = new Introduced_By__c();
@@ -430,7 +544,7 @@ global without sharing class  BrokerPortalController {
             return newAccount.Id; 
             
         } catch (Exception e) {
-            return 'Error: ' + e.getMessage();
+            throw new AuraHandledException('Error creating broker account: ' + e.getMessage());
         }
     }
     
