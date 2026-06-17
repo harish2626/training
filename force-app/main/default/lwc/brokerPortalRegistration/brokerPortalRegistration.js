@@ -175,6 +175,18 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
     allNationalityOptions;
 
+    // ===== Multi-step wizard state =====
+    @track currentStep = 1;
+    totalSteps = 5;
+
+    stepConfig = [
+        { num: 1, title: 'Company & License Details', subtitle: 'Brokerage type and basic information' },
+        { num: 2, title: 'Billing & Tax', subtitle: 'Registered address and tax details' },
+        { num: 3, title: 'Bank & Referral', subtitle: 'Bank account and ORA referral' },
+        { num: 4, title: 'Company Personnel', subtitle: 'Signatories and beneficial owners' },
+        { num: 5, title: 'Review & Submit', subtitle: 'Confirm details and submit' }
+    ];
+
 
     @wire(getObjectInfo, { objectApiName: Account_OBJECT })
     AccountInfo;
@@ -302,6 +314,149 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
     
 
+
+    // ===== Multi-step wizard getters =====
+    get isStep1() { return this.currentStep === 1; }
+    get isStep2() { return this.currentStep === 2; }
+    get isStep3() { return this.currentStep === 3; }
+    get isStep4() { return this.currentStep === 4; }
+    get isStep5() { return this.currentStep === 5; }
+
+    get currentStepTitle() { return this.stepConfig[this.currentStep - 1].title; }
+    get currentStepDescription() { return this.stepConfig[this.currentStep - 1].subtitle; }
+
+    get showBackButton() { return this.currentStep > 1; }
+    get showNextButton() { return this.currentStep < this.totalSteps; }
+
+    get stepItems() {
+        return this.stepConfig.map((s) => {
+            const completed = s.num < this.currentStep;
+            const active = s.num === this.currentStep;
+            let cssClass = 'step-item';
+            if (active) { cssClass += ' step-item_active'; }
+            if (completed) { cssClass += ' step-item_completed'; }
+            return { ...s, completed, active, cssClass };
+        });
+    }
+
+    // ===== Field getters (keep displayed values when navigating between steps) =====
+    get brokerageTypes() { return this.formData.brokerageTypes; }
+    get brokerageAgencyName() { return this.formData.brokerageAgencyName; }
+    get brokerOfficeName() { return this.formData.brokerOfficeName; }
+    get tradeLicenseName() { return this.formData.tradeLicenseName; }
+    get tradeLicenseNumber() { return this.formData.tradeLicenseNumber; }
+    get tradeLicenseExpiryDate() { return this.formData.tradeLicenseExpiryDate; }
+    get agencyEmailId() { return this.formData.agencyEmailId; }
+    get agencyContactNumber() { return this.formData.agencyContactNumber; }
+    get agencyCountryCode() { return this.formData.agencyCountryCode; }
+    get landlineCountryCode() { return this.formData.landlineCountryCode; }
+    get landline() { return this.formData.landline; }
+    get website() { return this.formData.website; }
+    get POAExpiryDate() { return this.formData.POAExpiryDate; }
+    get ornNumber() { return this.formData.ornNumber; }
+    get ornIssuanceDate() { return this.formData.ornIssuanceDate; }
+    get ornExpiryDate() { return this.formData.ornExpiryDate; }
+    get admRegistrationNumber() { return this.formData.admRegistrationNumber; }
+    get admIssuanceDate() { return this.formData.admIssuanceDate; }
+    get admExpiryDate() { return this.formData.admExpiryDate; }
+    get linkedInProfileName() { return this.formData.linkedInProfileName; }
+    get instagramProfileName() { return this.formData.instagramProfileName; }
+    get facebookProfileName() { return this.formData.facebookProfileName; }
+    get officeNumber() { return this.formData.officeNumber; }
+    get buildingNumber() { return this.formData.buildingNumber; }
+    get streetName() { return this.formData.streetName; }
+    get detailedRegisteredAddress() { return this.formData.detailedRegisteredAddress; }
+    get poBox() { return this.formData.poBox; }
+    get trnNumber() { return this.formData.trnNumber; }
+    get bankName() { return this.formData.bankName; }
+    get bankBranch() { return this.formData.bankBranch; }
+    get accountNumber() { return this.formData.accountNumber; }
+    get ibanNumber() { return this.formData.ibanNumber; }
+    get swiftCode() { return this.formData.swiftCode; }
+    get accountCurrency() { return this.formData.accountCurrency; }
+    get agencyExecutiveId() { return this.formData.agencyExecutiveId; }
+    get ownerFirstName() { return this.formData.ownerFirstName; }
+    get ownerLastName() { return this.formData.ownerLastName; }
+    get ownerEmail() { return this.formData.ownerEmail; }
+    get ownerMobileCountryCode() { return this.formData.ownerMobileCountryCode; }
+    get ownerMobileNumber() { return this.formData.ownerMobileNumber; }
+    get designation() { return this.formData.designation; }
+    get passportExpiryDate() { return this.formData.passportExpiryDate; }
+    get emiratesIDExpiryDate() { return this.formData.emiratesIDExpiryDate; }
+    get signatoryName() { return this.formData.signatoryName; }
+    get otherIntroducedBy() { return this.formData.otherIntroducedBy; }
+
+    // ===== Wizard navigation =====
+    handleStepClick(event) {
+        const target = parseInt(event.currentTarget.dataset.step, 10);
+        // Allow jumping back to a previously completed step only
+        if (!isNaN(target) && target < this.currentStep) {
+            this.currentStep = target;
+            this.showError = false;
+            this.errorMessage = '';
+        }
+    }
+
+    handleBack() {
+        if (this.currentStep > 1) {
+            this.currentStep -= 1;
+            this.showError = false;
+            this.errorMessage = '';
+            this.scrollToTop();
+        }
+    }
+
+    handleNext() {
+        if (this.validateCurrentStep() && this.currentStep < this.totalSteps) {
+            this.currentStep += 1;
+            this.scrollToTop();
+        }
+    }
+
+    scrollToTop() {
+        const content = this.template.querySelector('.content');
+        if (content) { content.scrollTop = 0; }
+    }
+
+    // Validate the fields currently rendered for the active step before advancing.
+    // File inputs are excluded here (their presence is tracked in selectedMultiFiles and
+    // enforced at final submit) so navigating between steps does not falsely block the user.
+    validateCurrentStep() {
+        const controls = [...this.template.querySelectorAll('lightning-input, lightning-combobox')];
+        let valid = true;
+        controls.forEach((ctrl) => {
+            if (ctrl.type === 'file') { return; }
+            if (typeof ctrl.reportValidity === 'function' && !ctrl.reportValidity()) {
+                valid = false;
+            }
+        });
+
+        if (!valid) {
+            this.showError = true;
+            this.errorMessage = 'Please complete all required fields correctly before continuing.';
+            return false;
+        }
+
+        // Step 1: duplicate checks must be clear before continuing
+        if (this.currentStep === 1 && (this.checkTradeLNumber || this.checkAgencyEmail || this.checkLandlineNumber)) {
+            this.showError = true;
+            return false;
+        }
+
+        // Step 4: validate added personnel entries
+        if (this.currentStep === 4) {
+            const personnelError = this.validatePersonnelEntries();
+            if (personnelError) {
+                this.showError = true;
+                this.errorMessage = personnelError;
+                return false;
+            }
+        }
+
+        this.showError = false;
+        this.errorMessage = '';
+        return true;
+    }
 
     connectedCallback() {
         this.showError = false;
@@ -607,7 +762,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     validatePersonnelEntries() {
         for (let person of this.personnel) {
             if (!person.personType || person.personType.trim() === '') {
-                return 'All Person Type fields are required. Click on "Add New Company Personnel" to add more person types.';
+                return 'All Person Type fields are required. Click on "Add Person" to add more person types.';
             }
             if (!person.firstName || !person.lastName) {
                 return 'Please enter first name and last name for all added personnel.';

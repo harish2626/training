@@ -1,27 +1,44 @@
 <template>
-    <div class="logo-container">
-        <img src={logoImageSrcUrl} alt="ORA Logo" class="logo">
-    </div>
-    
     <div class="container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <h2>Welcome to <b>ORA Broker Portal.</b></h2>
-            <p>
-                Before accessing our open inventory and booking units, we need to finish your account and sign agreement documents.
-                <br/><br/>
-                Already a Registered Broker? &nbsp;
+        <!-- Sidebar / Stepper -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <img src={logoImageSrcUrl} alt="ORA Logo" class="logo">
+            </div>
+            <h2 class="sidebar-title">Broker Registration</h2>
+            <p class="sidebar-subtitle">
+                Complete each step to register your brokerage. Details must match your company registration and licenses.
+            </p>
+
+            <ul class="stepper">
+                <template for:each={stepItems} for:item="step">
+                    <li key={step.num} class={step.cssClass} data-step={step.num} onclick={handleStepClick}>
+                        <span class="step-indicator">
+                            <template if:true={step.completed}>
+                                <lightning-icon icon-name="utility:check" size="x-small" variant="inverse"></lightning-icon>
+                            </template>
+                            <template if:false={step.completed}>{step.num}</template>
+                        </span>
+                        <span class="step-text">
+                            <span class="step-title">{step.title}</span>
+                            <span class="step-desc">{step.subtitle}</span>
+                        </span>
+                    </li>
+                </template>
+            </ul>
+
+            <p class="sidebar-login">
+                Already a Registered Broker?
                 <a href="javascript:void(0)" onclick={handleLoginPage} class="login-link">Login here</a>
             </p>
-        </div>
+        </aside>
 
-        <div class="content">
-            <h1 class="title">BROKER REGISTRATION</h1>
+        <main class="content">
             <template if:false={showSuccessPage}>
-                <p class="subtitle">
-                    Please fill out all details to complete your company's registration. These details should match your company registration and licenses.<br/>
-                    Please prepare your documents ahead of registration as the session expires in 20 minutes.
-                </p>
+                <div class="step-header">
+                    <h1 class="title">{currentStepTitle}</h1>
+                    <p class="subtitle">{currentStepDescription}</p>
+                </div>
 
                 <div class="form">
 
@@ -41,7 +58,9 @@
                             </div>
                         </div>
                     </template>
-                    
+
+                    <template if:true={isStep1}>
+                    <div class="step-section">
                     <template if:true={BrokerTypesValues.data}>
                         <lightning-combobox label="Brokerage Types"
                             placeholder="Brokerage Types" data-id="brokerageTypes" value={brokerageTypes}
@@ -49,9 +68,7 @@
                         </lightning-combobox>
                     </template>
 
-                    <lightning-accordion active-section-name="A">
-                        
-                        <lightning-accordion-section name="A" label="Basic Information">
+                    <!-- Basic Information -->
 
                             <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
 
@@ -294,10 +311,12 @@
                                 
 
                             </div>
-                        </lightning-accordion-section>
+                    </div>
+                    </template>
 
-
-                        <lightning-accordion-section name="B" label="Billing Information">
+                    <template if:true={isStep2}>
+                    <div class="step-section">
+                        <h2 class="step-subheading">Billing Information</h2>
                             <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="text"  data-id="officeNumber" value={officeNumber}
@@ -328,10 +347,7 @@
                                         label="P.O. Box"  placeholder="P.O. Box" onchange={handleInputChange}></lightning-input>
                                 </div>
                             </div>
-                        </lightning-accordion-section>
-
-
-                        <lightning-accordion-section name="C" label="Tax Information">
+                        <h2 class="step-subheading">Tax Information</h2>
                             <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
                                 <div class="slds-col slds-size_1-of-2">
                                     <div class="slds-form-element">
@@ -421,10 +437,12 @@
                                     </template>
                                 </div>
                             </div>
-                        </lightning-accordion-section>
+                    </div>
+                    </template>
 
-
-                        <lightning-accordion-section name="D" label="Bank Details Information">
+                    <template if:true={isStep3}>
+                    <div class="step-section">
+                        <h2 class="step-subheading">Bank Details</h2>
                             <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="text"  data-id="bankName" value={bankName}
@@ -462,10 +480,7 @@
                                 </template>
                             </div>
 
-                        </lightning-accordion-section> 
-
-                        
-                        <lightning-accordion-section name="E" label="Introduced by (ORA team)">
+                        <h2 class="step-subheading">Introduced by (ORA team)</h2>
                             <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-combobox data-id="agencyExecutiveId"  label="ORA Broker Management Team"  placeholder="Choose a Agency Executive" 
@@ -492,15 +507,17 @@
 
                                
                             </div>
-                        </lightning-accordion-section>  
+                    </div>
+                    </template>
 
+                    <template if:true={isStep4}>
+                    <div class="step-section">
 
-                        <lightning-accordion-section name="F" label="Company Personnel">
                             
                             <!-- OWNER SECTION -->
                                 <div class="slds-p-around_medium">
                                   
-                                <h2 class="slds-text-title_bold slds-m-bottom_small">Owner</h2>
+                                <h2 class="step-subheading slds-m-bottom_small">Primary Signatory</h2>
                                 
                                 <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
                                     <div class="slds-col slds-size_1-of-2">
@@ -639,9 +656,11 @@
                             </div>
 
                                 <div class="slds-p-around_medium">
-                                    <div class="slds-grid slds-align_absolute-center slds-m-bottom_medium">
-                                        <lightning-button label="Add New Company Personnel"
-                                            variant="brand"
+                                    <div class="add-person-row">
+                                        <lightning-button label="Add Person"
+                                            icon-name="utility:add"
+                                            variant="brand-outline"
+                                            class="add-person-btn"
                                             onclick={handleAddPersonnel}>
                                         </lightning-button>
                                     </div>
@@ -857,11 +876,11 @@
                                         <p class="slds-text-body_regular"> Please add all directors/managers, authorized signatories, and Ultimate beneficial owners (UBOs) holding ≥25% ownership or control; if the same person holds more than one role, please select “Same as person” and select the person. Valid passport copies, Emirates ID (where applicable), and proof of address must be submitted for all individuals listed above.</p>
                                     </template>
                                 </div>
-                            </lightning-accordion-section>
+                    </div>
+                    </template>
 
-
-                    </lightning-accordion>
-                    
+                    <template if:true={isStep5}>
+                    <div class="step-section">
                     <div class="slds-m-around_medium">
                         <div class="slds-grid slds-gutters slds-align-items-start">
                             
@@ -882,6 +901,8 @@
                             </div>
                         </div>
                     </div>
+                    </div>
+                    </template>
 
                 </div>
 
@@ -895,9 +916,18 @@
                 </span>
 
 
-                <div class="buttons">
-                    <template if:false={checkRequetsSubmitted}>
-                        <button class="continue" onclick={handleCreateBroker}>SUBMIT</button>
+                <div class="wizard-nav">
+                    <template if:true={showBackButton}>
+                        <button class="btn-back" onclick={handleBack}>Back</button>
+                    </template>
+                    <div class="wizard-nav-spacer"></div>
+                    <template if:true={showNextButton}>
+                        <button class="btn-next" onclick={handleNext}>Continue</button>
+                    </template>
+                    <template if:true={isStep5}>
+                        <template if:false={checkRequetsSubmitted}>
+                            <button class="btn-next" onclick={handleCreateBroker}>Submit Registration</button>
+                        </template>
                     </template>
                 </div>
             </template>
@@ -937,6 +967,6 @@
                 </div>
 
             </template>
-        </div>
+        </main>
     </div>
 </template>
