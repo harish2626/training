@@ -22,7 +22,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
     @api disclaimer;
     @track isdisclaimerChecked = false;
-    @track disclaimerText = 'The submission of the information in this form does not constitute an agreement or commitment by ORA (“us” or “we”) in any way. By submitting the information in this form, you confirm that you are not entitled to, and should not, use or utilize the name of ORA, ORA Q, or any of their respective affiliates, officers, or directors in any manner whatsoever. Additionally, you are not permitted to carry out any real estate or real estate marketing activities on our behalf. By submitting this form, you also confirm that all information provided is true, accurate, and complete.';
+    @track disclaimerText = 'The submission of the information in this form does not constitute an agreement or commitment by ORA (“us” or “we”) in any way. By submitting the information in this form, you confirm that you are not entitled to, and should not, use or utilize the name of ORA, ORA Q, or any of their respective affiliates, officers, or directors in any manner whatsoever. Additionally, you are not permitted to carry out any real estate or real estate marketing activities on our behalf. For details on how we process your personal data, please review our privacy notice. By submitting this form, you also confirm that all information provided is true, accurate, and complete.';
 
     @track formData = {
         agencyLocation : '',
@@ -112,6 +112,14 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     checkmemorandumCopy = false;
     errormemorandumCopy = false;
     errormemorandumCopyDoc = '';
+
+    checkcompanyAddressProof = false;
+    errorcompanyAddressProof = false;
+    errorcompanyAddressProofDoc = '';
+
+    checkibanLetter = false;
+    erroribanLetter = false;
+    erroribanLetterDoc = '';
     
     checkreraCertificate = false;
     errorreraCertificate = false;
@@ -156,11 +164,40 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     @track managers = [];
     @track personnel = [];
 
-    personTypeOptions = [
+    // Personnel form + table state
+    showLegacyPersonnel = false; // legacy owner/cards markup is hidden, superseded by form + table
+    @track personForm = {};
+    editingPersonId = null;
+
+    allPersonTypeOptions = [
         { label: 'Directors/Managers', value: 'Directors/Managers' },
         { label: 'Authorized signatories', value: 'Authorized signatories' },
         { label: 'Ultimate beneficial owners (UBOs) holding ≥25% ownership or control', value: 'UBO' }
     ];
+
+    // When "Same as" is selected, only show person types not yet assigned to that source person.
+    // When no "Same as" is selected, show all types.
+    get personTypeOptions() {
+        if (!this.personForm.sameAsPerson) {
+            return this.allPersonTypeOptions;
+        }
+
+        // Find which types the source person already covers
+        const sourceId = this.personForm.sameAsPerson;
+        const coveredTypes = new Set();
+        this.personnel.forEach((p) => {
+            // Include the source person's own type and any sameAs copies referencing them
+            if (p.id === sourceId || p.sameAsPerson === sourceId) {
+                // Skip the currently editing person (if editing, their type shouldn't block itself)
+                if (this.editingPersonId && p.id === this.editingPersonId) return;
+                if (p.personType) {
+                    coveredTypes.add(p.personType);
+                }
+            }
+        });
+
+        return this.allPersonTypeOptions.filter((opt) => !coveredTypes.has(opt.value));
+    }
 
     allowedFileTypes = '.png, .jpg, .jpeg, .pdf';       // Allowed file extensions
     allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
@@ -177,14 +214,15 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
     // ===== Multi-step wizard state =====
     @track currentStep = 1;
-    totalSteps = 5;
+    totalSteps = 6;
 
     stepConfig = [
         { num: 1, title: 'Company & License Details', subtitle: 'Brokerage type and basic information' },
         { num: 2, title: 'Billing & Tax', subtitle: 'Registered address and tax details' },
         { num: 3, title: 'Bank & Referral', subtitle: 'Bank account and ORA referral' },
-        { num: 4, title: 'Company Personnel', subtitle: 'Signatories and beneficial owners' },
-        { num: 5, title: 'Review & Submit', subtitle: 'Confirm details and submit' }
+        { num: 4, title: 'AML Policy', subtitle: 'Upload your AML / AML-CFT programme (optional)' },
+        { num: 5, title: 'Company Personnel', subtitle: 'Signatories and beneficial owners' },
+        { num: 6, title: 'Review & Submit', subtitle: 'Confirm details and submit' }
     ];
 
 
@@ -321,6 +359,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     get isStep3() { return this.currentStep === 3; }
     get isStep4() { return this.currentStep === 4; }
     get isStep5() { return this.currentStep === 5; }
+    get isStep6() { return this.currentStep === 6; }
 
     get currentStepTitle() { return this.stepConfig[this.currentStep - 1].title; }
     get currentStepDescription() { return this.stepConfig[this.currentStep - 1].subtitle; }
@@ -422,6 +461,20 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     // File inputs are excluded here (their presence is tracked in selectedMultiFiles and
     // enforced at final submit) so navigating between steps does not falsely block the user.
     validateCurrentStep() {
+        // Step 5 (Company Personnel) is validated by coverage, not by the add/edit form fields
+        // (an empty form is fine once the required people are already in the table).
+        if (this.currentStep === 5) {
+            const personnelError = this.validatePersonnelCoverage();
+            if (personnelError) {
+                this.showError = true;
+                this.errorMessage = personnelError;
+                return false;
+            }
+            this.showError = false;
+            this.errorMessage = '';
+            return true;
+        }
+
         const controls = [...this.template.querySelectorAll('lightning-input, lightning-combobox')];
         let valid = true;
         controls.forEach((ctrl) => {
@@ -443,25 +496,297 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             return false;
         }
 
-        // Step 4: validate added personnel entries
-        if (this.currentStep === 4) {
-            const personnelError = this.validatePersonnelEntries();
-            if (personnelError) {
-                this.showError = true;
-                this.errorMessage = personnelError;
-                return false;
-            }
-        }
-
         this.showError = false;
         this.errorMessage = '';
         return true;
+    }
+
+    // ===== Personnel: add/edit form + table =====
+    blankPersonForm() {
+        return {
+            id: `person-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            personType: '', sameAsPerson: '', firstName: '', lastName: '', email: '',
+            mobileCountryCode: '', mobileNumber: '', designation: '', nationality: '',
+            passportExpiryDate: '', emiratesIDExpiryDate: '', signatoryName: '',
+            passportCopy: null, emiratesIDCopy: null, visaCopy: null, proofOfAddress: null
+        };
+    }
+
+    get isEditingPerson() { return !!this.editingPersonId; }
+    get savePersonLabel() { return this.editingPersonId ? 'Update Person' : 'Save Person'; }
+    get personFormTitle() { return this.editingPersonId ? 'Edit Person' : 'Add Person'; }
+
+    // Proof of Address applies only to UBOs and Authorized Signatories
+    get showProofOfAddress() {
+        return this.personForm.personType === 'UBO'
+            || this.personForm.personType === 'Authorized signatories';
+    }
+
+    // "Same as" quick-fill: available whenever there is at least one other person to copy from.
+    // This allows the user to reuse the same individual across multiple roles (person types)
+    // regardless of whether all required types are already covered.
+    get showSameAs() {
+        return this.personnel.some((p) => p.id !== this.editingPersonId);
+    }
+
+    get sameAsOptions() {
+        const labels = this.personTypeLabels;
+        const allTypes = ['Directors/Managers', 'Authorized signatories', 'UBO'];
+
+        // For each original (non-sameAs) person, determine which types they already cover
+        // (either as their own entry or via sameAs copies referencing them).
+        const typesCoveredBySource = {};
+        this.personnel.forEach((p) => {
+            const sourceId = p.sameAsPerson || p.id;
+            if (!typesCoveredBySource[sourceId]) {
+                typesCoveredBySource[sourceId] = new Set();
+            }
+            if (p.personType) {
+                typesCoveredBySource[sourceId].add(p.personType);
+            }
+        });
+
+        return this.personnel
+            .filter((p) => {
+                if (p.id === this.editingPersonId) return false;
+                if (p.sameAsPerson) return false; // only originals are selectable
+                // Hide if this person already covers all types
+                const covered = typesCoveredBySource[p.id] || new Set();
+                return covered.size < allTypes.length;
+            })
+            .map((p) => {
+                const name = `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Unnamed';
+                const typeLabel = labels[p.personType] || p.personType || '';
+                return { label: typeLabel ? `${name} (${typeLabel})` : name, value: p.id };
+            });
+    }
+
+    // When "Same as" is chosen the detail fields are locked (it's the same individual,
+    // only the Person Type / role differs). No duplicate contact is created on the backend.
+    get personFieldsDisabled() { return !!this.personForm.sameAsPerson; }
+
+    get personTypeLabels() {
+        return {
+            'Directors/Managers': 'Directors/Managers',
+            'Authorized signatories': 'Authorized Signatories',
+            'UBO': 'Ultimate Beneficial Owner (UBO)'
+        };
+    }
+
+    get personnelRows() {
+        const labels = this.personTypeLabels;
+        const nameById = {};
+        this.personnel.forEach((p) => {
+            nameById[p.id] = `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Unnamed';
+        });
+        return this.personnel.map((p) => {
+            const name = `${p.firstName || ''} ${p.lastName || ''}`.trim();
+            const mobile = `${p.mobileCountryCode || ''} ${p.mobileNumber || ''}`.trim();
+            const sameAs = p.sameAsPerson ? (nameById[p.sameAsPerson] || '') : '';
+            return {
+                id: p.id,
+                typeLabel: labels[p.personType] || p.personType,
+                name: name || '—',
+                email: p.email || '—',
+                mobile: mobile || '—',
+                isSameAs: !!p.sameAsPerson,
+                sameAsLabel: sameAs ? `Same as ${sameAs}` : ''
+            };
+        });
+    }
+
+    handlePersonFormChange(event) {
+        const field = event.target.dataset.field;
+        const value = event.target.value;
+
+        // Quick-fill: copy an existing person's data (Person Type is left for the user to set)
+        if (field === 'sameAsPerson') {
+            this.personForm = { ...this.personForm, sameAsPerson: value };
+            if (value) {
+                const source = this.personnel.find((p) => p.id === value);
+                if (source) {
+                    this.personForm = {
+                        ...this.personForm,
+                        firstName: source.firstName,
+                        lastName: source.lastName,
+                        email: source.email,
+                        mobileCountryCode: source.mobileCountryCode,
+                        mobileNumber: source.mobileNumber,
+                        designation: source.designation,
+                        nationality: source.nationality,
+                        passportExpiryDate: source.passportExpiryDate,
+                        emiratesIDExpiryDate: source.emiratesIDExpiryDate,
+                        signatoryName: source.signatoryName,
+                        passportCopy: source.passportCopy,
+                        emiratesIDCopy: source.emiratesIDCopy,
+                        visaCopy: source.visaCopy,
+                        proofOfAddress: source.proofOfAddress
+                    };
+                }
+                // Clear personType if it's no longer available for this source
+                const availableTypes = this.personTypeOptions.map((o) => o.value);
+                if (this.personForm.personType && !availableTypes.includes(this.personForm.personType)) {
+                    this.personForm = { ...this.personForm, personType: '' };
+                }
+            }
+            return;
+        }
+
+        this.personForm = { ...this.personForm, [field]: value };
+    }
+
+    handlePersonFormFileUpload(event) {
+        const field = event.target.dataset.field;
+        if (!event.target.files || !event.target.files.length) { return; }
+        const file = event.target.files[0];
+        const ext = file.name.split('.').pop().toLowerCase();
+        const maxSize = 5 * 1024 * 1024;
+
+        if (!this.allowedExtensions.includes(ext)) {
+            event.target.value = '';
+            this.showError = true;
+            this.errorMessage = `Invalid file type. Allowed: ${this.allowedFileTypes}`;
+            return;
+        }
+        if (file.size > maxSize) {
+            event.target.value = '';
+            this.showError = true;
+            this.errorMessage = 'File too large. Max size allowed is 5MB.';
+            return;
+        }
+
+        const baseFileName = this.getFileName(field, ext);
+        const filename = `${baseFileName}_${Date.now()}_${this.personForm.id}.${ext}`;
+        this.personForm = { ...this.personForm, [field]: { filename, fileContent: file } };
+    }
+
+    handleSavePerson() {
+        const controls = [...this.template.querySelectorAll('.person-form lightning-input, .person-form lightning-combobox')];
+        let valid = true;
+        controls.forEach((c) => {
+            if (c.type === 'file') { return; }
+            if (typeof c.reportValidity === 'function' && !c.reportValidity()) { valid = false; }
+        });
+        if (!valid) {
+            this.showError = true;
+            this.errorMessage = 'Please complete the required fields for this person.';
+            return;
+        }
+        if (!this.personForm.email && !this.personForm.mobileNumber) {
+            this.showError = true;
+            this.errorMessage = 'Please provide an email or mobile number for this person.';
+            return;
+        }
+        // Proof of Address is required only for UBOs and Authorized Signatories (real persons).
+        if (!this.personForm.sameAsPerson && this.showProofOfAddress && !this.personForm.proofOfAddress) {
+            this.showError = true;
+            this.errorMessage = 'Proof of Address is required for UBOs and Authorized Signatories.';
+            return;
+        }
+         if (!this.personForm.sameAsPerson && !this.personForm.passportCopy) {
+            this.showError = true;
+            this.errorMessage = 'Passport Copy is required for this person.';
+            return;
+        }
+
+         if (!this.personForm.sameAsPerson && !this.personForm.visaCopy) {
+            this.showError = true;
+            this.errorMessage = 'Visa Copy is required for this person.';
+            return;
+        }
+
+         if (!this.personForm.sameAsPerson && !this.personForm.emiratesIDCopy) {
+            this.showError = true;
+            this.errorMessage = 'Emirates ID Copy is required for this person.';
+            return;
+        }
+
+
+        if (!this.personForm.sameAsPerson) {
+            this.syncPersonFiles(this.personForm);
+        }
+
+        const existingIndex = this.personnel.findIndex((p) => p.id === this.personForm.id);
+        if (existingIndex >= 0) {
+            const updated = [...this.personnel];
+            updated[existingIndex] = { ...this.personForm };
+            this.personnel = updated;
+        } else {
+            this.personnel = [...this.personnel, { ...this.personForm }];
+        }
+
+        this.editingPersonId = null;
+        this.personForm = this.blankPersonForm();
+        this.showError = false;
+        this.errorMessage = '';
+    }
+
+    handleEditPerson(event) {
+        const id = event.currentTarget.dataset.id;
+        const person = this.personnel.find((p) => p.id === id);
+        if (!person) { return; }
+        this.personForm = { ...person };
+        this.editingPersonId = id;
+        this.showError = false;
+        this.errorMessage = '';
+        this.scrollToTop();
+    }
+
+    handleCancelPersonEdit() {
+        this.editingPersonId = null;
+        this.personForm = this.blankPersonForm();
+        this.showError = false;
+        this.errorMessage = '';
+    }
+
+    handleDeletePerson(event) {
+        const id = event.currentTarget.dataset.id;
+        // Remove the person plus any "same as" role entries that point to them
+        const removedIds = this.personnel
+            .filter((p) => p.id === id || p.sameAsPerson === id)
+            .map((p) => p.id);
+        this.personnel = this.personnel.filter((p) => removedIds.indexOf(p.id) === -1);
+        this.selectedMultiFiles = this.selectedMultiFiles.filter(
+            (f) => !(f.key && removedIds.some((rid) => f.key.startsWith(`${rid}-`)))
+        );
+        if (removedIds.indexOf(this.editingPersonId) !== -1) {
+            this.editingPersonId = null;
+            this.personForm = this.blankPersonForm();
+        }
+    }
+
+    // Keep per-person files in selectedMultiFiles (keyed by personId-field) for upload.
+    syncPersonFiles(person) {
+        const fileFields = ['passportCopy', 'emiratesIDCopy', 'visaCopy', 'proofOfAddress'];
+        fileFields.forEach((f) => {
+            const key = `${person.id}-${f}`;
+            this.selectedMultiFiles = this.selectedMultiFiles.filter((x) => x.key !== key);
+            if (person[f] && person[f].fileContent) {
+                this.selectedMultiFiles = [
+                    ...this.selectedMultiFiles,
+                    { key, filename: person[f].filename, fileContent: person[f].fileContent }
+                ];
+            }
+        });
+    }
+
+    // At least one person required for each of the three types
+    validatePersonnelCoverage() {
+        const labels = this.personTypeLabels;
+        const required = ['Directors/Managers', 'Authorized signatories', 'UBO'];
+        const present = new Set(this.personnel.map((p) => p.personType));
+        const missing = required.filter((t) => !present.has(t));
+        if (missing.length) {
+            return `Please add at least one person for: ${missing.map((m) => labels[m]).join(', ')}.`;
+        }
+        return null;
     }
 
     connectedCallback() {
         this.showError = false;
         this.Spinner = false;
         this.showSuccessPage = false;
+        this.personForm = this.blankPersonForm();
         this.today = new Date().toISOString().slice(0,10);
 
         Promise.resolve().then(() => {
@@ -471,6 +796,24 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         });
 
         console.log("OUTPUT disclaimer: ", this.disclaimer);
+    }
+
+    renderedCallback() {
+        this.updateDisclaimerHtml();
+    }
+
+    updateDisclaimerHtml() {
+        const container = this.template.querySelector('[data-id="disclaimerTextContainer"]');
+        if (!container) {
+            return;
+        }
+
+        const text = this.disclaimer || this.disclaimerText;
+        const linkedText = text.replace(
+            /privacy notice/gi,
+            '<a href="https://ora-uae.com/privacy-policy/" target="_blank" rel="noreferrer noopener">privacy notice</a>'
+        );
+        container.innerHTML = linkedText;
     }
 
     // Check for trade license already in existing broker account
@@ -740,22 +1083,71 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     }
 
     buildInputData() {
+        // The Apex (not yet rewritten for the array model) always builds a primary "Admin"
+        // Contact from the owner* fields. We map the first person into those fields so that
+        // contact is valid, and represent that same person in the personnel array as a
+        // sameAsPerson:'owner' role stub so the Apex tags their role onto the Admin contact
+        // instead of creating a duplicate Contact. The remaining people are sent as full entries.
+        const personnelPayload = [];
+        let ownerFields = {};
+
+        if (this.personnel.length) {
+            const [primary, ...rest] = this.personnel;
+            const primaryId = primary.id;
+
+            ownerFields = {
+                ownerFirstName: primary.firstName,
+                ownerLastName: primary.lastName,
+                ownerEmail: primary.email,
+                ownerMobileNumber: primary.mobileNumber,
+                ownerMobileCountryCode: primary.mobileCountryCode,
+                nationality: primary.nationality,
+                designation: primary.designation,
+                passportExpiryDate: primary.passportExpiryDate,
+                emiratesIDExpiryDate: primary.emiratesIDExpiryDate,
+                signatoryName: primary.signatoryName
+            };
+
+            // Role stub for the primary person (mapped onto the Admin/owner contact)
+            personnelPayload.push({
+                id: primary.id,
+                sameAsPerson: 'owner',
+                personType: primary.personType
+            });
+
+            rest.forEach((person) => {
+                if (person.sameAsPerson) {
+                    // "Same as" => no new Contact; just add this role to the referenced person.
+                    // A reference to the primary resolves to the owner's role bucket.
+                    const sourceId = person.sameAsPerson === primaryId ? 'owner' : person.sameAsPerson;
+                    personnelPayload.push({
+                        id: person.id,
+                        sameAsPerson: sourceId,
+                        personType: person.personType
+                    });
+                } else {
+                    personnelPayload.push({
+                        id: person.id,
+                        personType: person.personType,
+                        firstName: person.firstName,
+                        lastName: person.lastName,
+                        email: person.email,
+                        mobileCountryCode: person.mobileCountryCode,
+                        mobileNumber: person.mobileNumber,
+                        designation: person.designation,
+                        nationality: person.nationality,
+                        passportExpiryDate: person.passportExpiryDate,
+                        emiratesIDExpiryDate: person.emiratesIDExpiryDate,
+                        signatoryName: person.signatoryName
+                    });
+                }
+            });
+        }
+
         return {
             ...this.formData,
-            personnel: this.personnel.map(person => ({
-                id: person.id,
-                personType: person.personType,
-                sameAsPerson: person.sameAsPerson,
-                firstName: person.firstName,
-                lastName: person.lastName,
-                email: person.email,
-                mobileCountryCode: person.mobileCountryCode,
-                mobileNumber: person.mobileNumber,
-                designation: person.designation,
-                nationality: person.nationality,
-                passportExpiryDate: person.passportExpiryDate,
-                emiratesIDExpiryDate: person.emiratesIDExpiryDate
-            }))
+            ...ownerFields,
+            personnel: personnelPayload
         };
     }
 
@@ -910,7 +1302,10 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             managerPassportCopy: 'Manager Passport Copy',
             managerEmiratesIDCopy: 'Manager Emirates ID Copy',
             managerVisaCopy: 'Manager Visa Copy',
-            amlPolicy: 'AML Policy'
+            amlPolicy: 'AML Policy',
+            proofOfAddress: 'Proof of Address',
+            companyAddressProof: 'Company Registered Address Proof',
+            ibanLetter: 'IBAN Letter'
         };
         return (fileNames[field] || 'Document.');
     }
@@ -994,13 +1389,6 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             { key: 'ibanNumber', message: 'IBAN Number cannot be empty' },
             { key: 'swiftCode', message: 'Swift Code cannot be empty' },
             //{ key: 'accountCurrency', message: 'Currency cannot be empty' },
-            { key: 'ownerFirstName', message: 'Owner First Name cannot be empty' },
-            { key: 'ownerLastName', message: 'Owner Last Name cannot be empty' },
-            { key: 'ownerEmail', message: 'Owner Email cannot be empty' },
-            { key: 'ownerMobileNumber', message: 'Owner Mobile Number cannot be empty' },
-            { key: 'passportExpiryDate', message: 'Passport Expiry Date cannot be empty' },
-            { key: 'signatoryName', message: 'Signatory Name cannot be empty' },
-            //{ key: 'nationality', message: 'Nationality cannot be empty' },
             { key: 'detailedRegisteredAddress', message: 'Detailed Registered Address cannot be empty' }
         ];
 
@@ -1020,12 +1408,8 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         //    requiredFields.push({ key: 'trnNumber', message: 'TRN (Tax Registration Number) cannot be empty' });
         } else if(this.internationLocation && (!this.formData.accountCurrency || this.formData.accountCurrency.trim() === '')) {
             requiredFields.push({ key: 'accountCurrency', message: 'Currency cannot be empty' });
-        } else if(!this.internationLocation && (!this.formData.emiratesIDExpiryDate || this.formData.emiratesIDExpiryDate.trim() === '')) {
-            requiredFields.push({ key: 'emiratesIDExpiryDate', message: 'Emirates ID Expiry Date cannot be empty' });
-        } else if(/*this.internationLocation &&*/ (!this.formData.landlineCountryCode || this.formData.landlineCountryCode.trim() === '')) {
+        } else if((!this.formData.landlineCountryCode || this.formData.landlineCountryCode.trim() === '')) {
             requiredFields.push({ key: 'landlineCountryCode', message: 'Landline Country Code cannot be empty' });
-        } else if(/*this.internationLocation && */(!this.formData.ownerMobileCountryCode || this.formData.ownerMobileCountryCode.trim() === '')) {
-            requiredFields.push({ key: 'ownerMobileCountryCode', message: 'Owner Mobile Country Code cannot be empty' });
         }
 
         // Special character validation
@@ -1043,9 +1427,6 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             { key: 'accountNumber', message: 'Account Number cannot contain special characters' },
             { key: 'ibanNumber', message: 'IBAN Number cannot contain special characters' },
             { key: 'swiftCode', message: 'Swift Code cannot contain special characters' },
-            { key: 'ownerFirstName', message: 'Owner First Name cannot contain special characters' },
-            { key: 'ownerLastName', message: 'Owner Last Name cannot contain special characters' },
-            { key: 'ownerMobileNumber', message: 'Owner Mobile Number cannot contain special characters' },
             { key: 'buildingNumber', message: 'Building Number cannot contain special characters' }
             
         ];
@@ -1069,17 +1450,15 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         if (this.internationLocation) {
             requiredFiles = [
                 { key: 'tradeLicenseCopy', message: 'Trade License/Registration Certificate is required' },
-                //{ key: 'vatCertificate', message: 'VAT Certificate is required' },
-                { key: 'passportCopy', message: 'Passport Copy is required' }
-                //{ key: 'emiratesIDCopy', message: 'Emirates ID Copy is required' }
+                { key: 'companyAddressProof', message: 'Proof of the company\u2019s Registered Address is required' },
+                { key: 'ibanLetter', message: 'IBAN Letter is required' }
             ];
         } else {
             requiredFiles = [
                 { key: 'tradeLicenseCopy', message: 'Trade License Copy is required' },
-                //{ key: 'taxRegistrationCopy', message: 'Tax registration certificate is required' },
                 { key: 'vatCertificate', message: 'VAT/Non - VAT Certificate is required' },
-                { key: 'passportCopy', message: 'Passport Copy is required' },
-                { key: 'emiratesIDCopy', message: 'Emirates ID Copy is required' }
+                { key: 'companyAddressProof', message: 'Proof of the company\u2019s Registered Address is required' },
+                { key: 'ibanLetter', message: 'IBAN Letter is required' }
             ];
         }
 
@@ -1159,7 +1538,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             return;
         }
 
-        const personnelValidationError = this.validatePersonnelEntries();
+        const personnelValidationError = this.validatePersonnelCoverage();
         if (personnelValidationError) {
             this.showError = true;
             this.errorMessage = personnelValidationError;

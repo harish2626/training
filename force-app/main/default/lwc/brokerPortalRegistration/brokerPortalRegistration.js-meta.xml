@@ -10,7 +10,7 @@
 	</targets>
 	<targetConfigs>
         <targetConfig targets="lightningCommunity__Default">
-            <property name="disclaimer" type="String" label="Disclaimer" default="The submission of the information in this form does not constitute an agreement or commitment by ORA (“us” or “we”) in any way. By submitting the information in this form, you confirm that you are not entitled to, and should not, use or utilize the name of ORA, ORA Q, or any of their respective affiliates, officers, or directors in any manner whatsoever. Additionally, you are not permitted to carry out any real estate or real estate marketing activities on our behalf. We collect and use the data provided in this form internally, in accordance with applicable laws. By submitting this form, you also confirm that all information provided is true, accurate, and complete." />
+            <property name="disclaimer" type="String" label="Disclaimer" default="The submission of the information in this form does not constitute an agreement or commitment by ORA (“us” or “we”) in any way. By submitting the information in this form, you confirm that you are not entitled to, and should not, use or utilize the name of ORA, ORA Q, or any of their respective affiliates, officers, or directors in any manner whatsoever. Additionally, you are not permitted to carry out any real estate or real estate marketing activities on our behalf. For details on how we process your personal data, please review our privacy notice. By submitting this form, you also confirm that all information provided is true, accurate, and complete." />
 			<property type="ContentReference" name="logoImageContentId" label="Logo Image ContentId" filter="cms_image"/>
 		</targetConfig>
 	</targetConfigs>

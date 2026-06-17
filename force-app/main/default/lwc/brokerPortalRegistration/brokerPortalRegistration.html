@@ -146,6 +146,17 @@
                                     </template>
                                 </div>
                                 <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-id="companyAddressProof"
+                                        accept={allowedFileTypes} required
+                                        label="Proof of the company's Registered Address" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                                    <template if:true={checkcompanyAddressProof}>
+                                        <span style="color:green">Registered Address Proof Uploaded</span>
+                                    </template>
+                                    <template if:true={errorcompanyAddressProof}>
+                                        <div style="color:red;font-weight: bold;">{errorcompanyAddressProofDoc}</div>
+                                    </template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
                                     <lightning-input  type="date" placeholder="Trade License Expiry Date" label="Trade License Expiry Date"
                                         min={today} value={tradeLicenseExpiryDate} data-id="tradeLicenseExpiryDate" onchange={handleInputChange} required></lightning-input>
                                 </div>
@@ -468,6 +479,17 @@
                                     <lightning-input type="text"  data-id="swiftCode" value={swiftCode}
                                         label="Swift Code"  placeholder="Swift Code" onchange={handleInputChange} required></lightning-input>
                                 </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-id="ibanLetter"
+                                        accept={allowedFileTypes} required
+                                        label="IBAN Letter" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
+                                    <template if:true={checkibanLetter}>
+                                        <span style="color:green">IBAN Letter Uploaded</span>
+                                    </template>
+                                    <template if:true={erroribanLetter}>
+                                        <div style="color:red;font-weight: bold;">{erroribanLetterDoc}</div>
+                                    </template>
+                                </div>
                                 <template if:true={internationLocation}>
                                     <div class="slds-col slds-size_1-of-2">
                                         <template if:true={CurrencyValues.data}>
@@ -511,6 +533,190 @@
                     </template>
 
                     <template if:true={isStep4}>
+                    <div class="step-section aml-step">
+                        <div class="aml-upload-card">
+                            <h2 class="step-subheading">AML Policy / AML-CFT Programme</h2>
+                            <p class="aml-desc">
+                                Upload your latest AML policy or AML-CFT programme. This document is optional —
+                                you can continue without it.
+                            </p>
+                            <lightning-input type="file" data-id="amlPolicy" accept={allowedFileTypes}
+                                label="AML policy / AML-CFT programme (latest version)" onchange={handleFileUpload}></lightning-input>
+                            <template if:true={checkamlPolicy}>
+                                <span style="color:green">AML Policy Uploaded</span>
+                            </template>
+                            <template if:true={erroramlPolicy}>
+                                <div style="color:red;font-weight: bold;">{erroramlPolicyDoc}</div>
+                            </template>
+                        </div>
+                    </div>
+                    </template>
+
+                    <template if:true={isStep5}>
+                    <div class="step-section">
+                        <p class="personnel-hint">
+                            <b>Please add all directors/managers, authorized signatories, and Ultimate beneficial owners (UBOs) holding ≥25% ownership or control; if the same person holds more than one role, please select “Same Person.” Valid passport copies, Emirates ID (where applicable), and proof of address must be submitted for all individuals listed above.
+                         </b> 
+                        </p>
+
+                        <!-- Person form (add / edit) -->
+                        <div class="person-form">
+                            <h2 class="step-subheading">{personFormTitle}</h2>
+                            <div class="slds-grid slds-gutters slds-wrap" style="margin-top:10px;">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-combobox label="Person Type" placeholder="Select Person Type"
+                                        data-field="personType" value={personForm.personType}
+                                        options={personTypeOptions} onchange={handlePersonFormChange} required>
+                                    </lightning-combobox>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2"></div>
+
+                                <template if:true={showSameAs}>
+                                    <div class="slds-col slds-size_1-of-1">
+                                        <div class="same-as-box">
+                                            <lightning-icon icon-name="utility:copy" size="small" class="same-as-icon"></lightning-icon>
+                                            <div class="same-as-field">
+                                                <lightning-combobox label="Same as person" placeholder="Select a person to copy their details"
+                                                    data-field="sameAsPerson" value={personForm.sameAsPerson}
+                                                    options={sameAsOptions} onchange={handlePersonFormChange}
+                                                    field-level-help="If this individual already holds another role, select them here. We won't create a duplicate — we'll add this role to the same person.">
+                                                </lightning-combobox>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" label="First Name" data-field="firstName"
+                                        value={personForm.firstName} onchange={handlePersonFormChange} disabled={personFieldsDisabled} required></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" label="Last Name" data-field="lastName"
+                                        value={personForm.lastName} onchange={handlePersonFormChange} disabled={personFieldsDisabled} required></lightning-input>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="email" label="Email" data-field="email" required
+                                        value={personForm.email} onchange={handlePersonFormChange} disabled={personFieldsDisabled}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <div class="slds-grid slds-gutters">
+                                        <div class="slds-col slds-size_1-of-3">
+                                            <lightning-combobox data-field="mobileCountryCode" label="Country Code"
+                                                placeholder="Choose a Country Code" options={countryCodeOptions}
+                                                value={personForm.mobileCountryCode} onchange={handlePersonFormChange} disabled={personFieldsDisabled}>
+                                            </lightning-combobox>
+                                        </div>
+                                        <div class="slds-col slds-size_2-of-3">
+                                            <lightning-input pattern="[0-9]{9}" placeholder="Mobile Number" label="Mobile Number"
+                                                data-field="mobileNumber" value={personForm.mobileNumber} onchange={handlePersonFormChange} disabled={personFieldsDisabled}></lightning-input>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" label="Designation" data-field="designation"
+                                        value={personForm.designation} onchange={handlePersonFormChange} disabled={personFieldsDisabled}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <template if:true={allNationalityOptions}>
+                                        <lightning-combobox label="Nationality" data-field="nationality"
+                                            value={personForm.nationality} placeholder="Select Nationality"
+                                            options={allNationalityOptions} onchange={handlePersonFormChange} disabled={personFieldsDisabled}>
+                                        </lightning-combobox>
+                                    </template>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-field="passportCopy" accept={allowedFileTypes}
+                                        label="Passport Copy" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} required style="margin-bottom: 1px;"></lightning-input>
+                                    <template if:true={personForm.passportCopy}><span style="color:green">Passport Copy selected</span></template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="date" label="Passport Expiry Date" min={today}
+                                        data-field="passportExpiryDate" value={personForm.passportExpiryDate} onchange={handlePersonFormChange} disabled={personFieldsDisabled}></lightning-input>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-field="emiratesIDCopy" accept={allowedFileTypes}
+                                        label="Emirates ID Copy" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} required style="margin-bottom: 1px;"></lightning-input>
+                                    <template if:true={personForm.emiratesIDCopy}><span style="color:green">Emirates ID Copy selected</span></template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="date" label="Emirates ID Expiry Date" min={today}
+                                        data-field="emiratesIDExpiryDate" value={personForm.emiratesIDExpiryDate} onchange={handlePersonFormChange} disabled={personFieldsDisabled}></lightning-input>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-field="visaCopy" accept={allowedFileTypes}
+                                        label="Visa Copy" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} required style="margin-bottom: 1px;"></lightning-input>
+                                    <template if:true={personForm.visaCopy}><span style="color:green">Visa Copy selected</span></template>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text" label="Signatory Name" data-field="signatoryName"
+                                        value={personForm.signatoryName} onchange={handlePersonFormChange} disabled={personFieldsDisabled}></lightning-input>
+                                </div>
+
+                                <template if:true={showProofOfAddress}>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="file" data-field="proofOfAddress" accept={allowedFileTypes} required
+                                        label="Proof of Address" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} style="margin-bottom: 1px;"></lightning-input>
+                                    <template if:true={personForm.proofOfAddress}><span style="color:green">Proof of Address selected</span></template>
+                                </div>
+                                </template>
+                            </div>
+
+                            <div class="person-form-actions">
+                                <template if:true={isEditingPerson}>
+                                    <button class="btn-back" onclick={handleCancelPersonEdit}>Cancel</button>
+                                </template>
+                                <button class="btn-next" onclick={handleSavePerson}>{savePersonLabel}</button>
+                            </div>
+                        </div>
+
+                        <!-- Added personnel table -->
+                        <template if:true={personnel.length}>
+                            <table class="personnel-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Mobile</th>
+                                        <th class="col-actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={personnelRows} for:item="row">
+                                        <tr key={row.id}>
+                                            <td data-label="Type">
+                                                <span class="type-badge">{row.typeLabel}</span>
+                                                <template if:true={row.isSameAs}>
+                                                    <span class="same-as-note">{row.sameAsLabel}</span>
+                                                </template>
+                                            </td>
+                                            <td data-label="Name">{row.name}</td>
+                                            <td data-label="Email">{row.email}</td>
+                                            <td data-label="Mobile">{row.mobile}</td>
+                                            <td class="col-actions">
+                                                <lightning-button-icon icon-name="utility:edit" alternative-text="Edit"
+                                                    title="Edit" data-id={row.id} onclick={handleEditPerson}
+                                                    class="slds-m-right_x-small"></lightning-button-icon>
+                                                <lightning-button-icon icon-name="utility:delete" alternative-text="Remove"
+                                                    title="Remove" data-id={row.id} onclick={handleDeletePerson}></lightning-button-icon>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+                        <template if:false={personnel.length}>
+                            <p class="personnel-empty">No personnel added yet. Complete the form above and click Save.</p>
+                        </template>
+                    </div>
+                    </template>
+
+                    <!-- Legacy personnel markup (kept hidden, superseded by the form + table above) -->
+                    <template if:true={showLegacyPersonnel}>
                     <div class="step-section">
 
                             
@@ -599,7 +805,7 @@
                                                 <template if:false={internationLocation}><abbr class="slds-required" title="required">*</abbr></template> Emirates ID Copy
                                             </label>
                                             <lightning-input type="file" data-id="emiratesIDCopy" variant="label-hidden"
-                                                accept={allowedFileTypes} multiple
+                                                accept={allowedFileTypes} required multiple
                                                 label="Emirates ID Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
                         
                                             <template if:true={checkemiratesIDCopy}>
@@ -621,7 +827,7 @@
 
                                     <div class="slds-col slds-size_1-of-2">
                                         <lightning-input type="file" data-id="visaCopy"
-                                            accept={allowedFileTypes} multiple
+                                            accept={allowedFileTypes} required multiple
                                             label="Visa Copy" onchange={handleFileUpload} style="margin-bottom: 1px;"></lightning-input>
                     
                                         <template if:true={checkvisaCopy}>
@@ -813,7 +1019,7 @@
                                                             accept={allowedFileTypes}
                                                             label="Passport Copy"
                                                             onchange={handlePersonnelFileUpload}
-                                                            disabled={person.isSameAs}
+                                                            disabled={person.isSameAs} required
                                                             style="margin-bottom: 1px;">
                                                         </lightning-input>
                                                         <template if:true={person.passportCopy}>
@@ -829,7 +1035,7 @@
                                                             accept={allowedFileTypes}
                                                             label="Emirates ID Copy"
                                                             onchange={handlePersonnelFileUpload}
-                                                            disabled={person.isSameAs}
+                                                            disabled={person.isSameAs} required
                                                             style="margin-bottom: 1px;">
                                                         </lightning-input>
                                                         <template if:true={person.emiratesIDCopy}>
@@ -845,7 +1051,7 @@
                                                             accept={allowedFileTypes}
                                                             label="Visa Copy"
                                                             onchange={handlePersonnelFileUpload}
-                                                            disabled={person.isSameAs}
+                                                            disabled={person.isSameAs} required
                                                             style="margin-bottom: 1px;">
                                                         </lightning-input>
                                                         <template if:true={person.visaCopy}>
@@ -861,6 +1067,7 @@
                                                             label="AML policy / AML-CFT programme (latest version)"
                                                             onchange={handlePersonnelFileUpload}
                                                             disabled={person.isSameAs}
+                                                            required
                                                             style="margin-bottom: 1px;">
                                                         </lightning-input>
                                                         <template if:true={person.amlPolicy}>
@@ -878,8 +1085,9 @@
                                 </div>
                     </div>
                     </template>
+                    <!-- end legacy personnel -->
 
-                    <template if:true={isStep5}>
+                    <template if:true={isStep6}>
                     <div class="step-section">
                     <div class="slds-m-around_medium">
                         <div class="slds-grid slds-gutters slds-align-items-start">
@@ -897,7 +1105,7 @@
                 
                             <!-- Disclaimer text on the right -->
                             <div class="slds-col slds-size_11-of-12">
-                                <p class="disclaimer-text">{disclaimerText}</p>
+                                <p class="disclaimer-text" lwc:dom="manual" data-id="disclaimerTextContainer"></p>
                             </div>
                         </div>
                     </div>
@@ -924,7 +1132,7 @@
                     <template if:true={showNextButton}>
                         <button class="btn-next" onclick={handleNext}>Continue</button>
                     </template>
-                    <template if:true={isStep5}>
+                    <template if:true={isStep6}>
                         <template if:false={checkRequetsSubmitted}>
                             <button class="btn-next" onclick={handleCreateBroker}>Submit Registration</button>
                         </template>

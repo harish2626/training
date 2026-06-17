@@ -214,9 +214,9 @@ a.login-link:hover,
 }
 
 .subtitle {
-    font-size: 15px;
+    font-size: 16.5px;
     color: var(--ora-muted);
-    line-height: 1.5;
+    line-height: 1.55;
 }
 
 .form {
@@ -265,6 +265,163 @@ a.login-link:hover,
     border-radius: 12px !important;
     background: #fcfbfa !important;
     box-shadow: none !important;
+}
+
+/* ===================== Personnel form + table ===================== */
+.personnel-hint {
+    font-size: 15.5px;
+    color: var(--ora-muted);
+    line-height: 1.55;
+    margin-bottom: 1.25rem;
+}
+
+/* ===================== AML step (centered) ===================== */
+.aml-step {
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.aml-upload-card {
+    width: 100%;
+    max-width: 520px;
+    text-align: center;
+    border: 1px dashed var(--ora-silver);
+    border-radius: 14px;
+    padding: 2.5rem 2rem;
+    background: #fcfbfa;
+}
+
+.aml-upload-card .step-subheading {
+    border: none;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    font-size: 18px;
+}
+
+.aml-desc {
+    font-size: 15px;
+    color: var(--ora-muted);
+    line-height: 1.55;
+    margin-bottom: 1.5rem;
+}
+
+.aml-upload-card lightning-input {
+    display: inline-block;
+}
+
+/* ===================== "Same as" highlighted row ===================== */
+.same-as-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    background: rgba(234, 139, 110, 0.10);
+    border: 1px solid var(--ora-sun);
+    border-radius: 10px;
+    padding: 1rem 1.15rem;
+    margin: 0.25rem 0 0.5rem;
+}
+
+.same-as-icon {
+    margin-top: 1.9rem;
+    --slds-c-icon-color-foreground-default: var(--ora-sun);
+}
+
+.same-as-field {
+    flex-grow: 1;
+}
+
+.person-form {
+    border: 1px solid var(--ora-border);
+    border-radius: 12px;
+    background: #fcfbfa;
+    padding: 1.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.person-form .step-subheading {
+    margin-top: 0;
+}
+
+.person-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.person-form-actions .btn-back,
+.person-form-actions .btn-next {
+    padding: 0.55rem 1.5rem;
+    font-size: 14px;
+}
+
+.personnel-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--ora-white);
+    border: 1px solid var(--ora-border);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 14px;
+}
+
+.personnel-table thead th {
+    text-align: left;
+    background: #f5f3f0;
+    color: var(--ora-dark-gray);
+    font-weight: 700;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--ora-border);
+}
+
+.personnel-table tbody td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--ora-border);
+    color: var(--ora-dark-gray);
+    vertical-align: middle;
+}
+
+.personnel-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.personnel-table tbody tr:hover {
+    background: #fcfbfa;
+}
+
+.personnel-table .col-actions {
+    text-align: right;
+    white-space: nowrap;
+    width: 110px;
+}
+
+.type-badge {
+    display: inline-block;
+    background: rgba(234, 139, 110, 0.14);
+    color: #c2613f;
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.same-as-note {
+    display: block;
+    font-size: 11.5px;
+    color: var(--ora-muted);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.personnel-empty {
+    font-size: 14px;
+    color: var(--ora-muted);
+    padding: 1rem;
+    border: 1px dashed var(--ora-border);
+    border-radius: 10px;
+    text-align: center;
 }
 
 /* ===================== Disclaimer ===================== */
@@ -413,5 +570,46 @@ a.login-link:hover,
     .btn-next {
         flex: 1;
         text-align: center;
+    }
+
+    /* Stack the personnel table into cards on small screens */
+    .personnel-table thead {
+        display: none;
+    }
+
+    .personnel-table,
+    .personnel-table tbody,
+    .personnel-table tr,
+    .personnel-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .personnel-table tr {
+        border-bottom: 1px solid var(--ora-border);
+        padding: 0.5rem 0;
+    }
+
+    .personnel-table tbody td {
+        border: none;
+        padding: 0.35rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .personnel-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--ora-muted);
+    }
+
+    .personnel-table .col-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .personnel-table .col-actions::before {
+        content: '';
     }
 }
