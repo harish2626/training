@@ -143,6 +143,10 @@
     color: var(--ora-white);
 }
 
+.step-item {
+    cursor: pointer;
+}
+
 .step-item_completed,
 .step-item_active {
     cursor: pointer;

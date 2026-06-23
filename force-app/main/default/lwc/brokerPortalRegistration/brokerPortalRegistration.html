@@ -537,8 +537,7 @@
                         <div class="aml-upload-card">
                             <h2 class="step-subheading">AML Policy / AML-CFT Programme</h2>
                             <p class="aml-desc">
-                                Upload your latest AML policy or AML-CFT programme. This document is optional —
-                                you can continue without it.
+                                Upload your latest AML policy or AML-CFT programme. 
                             </p>
                             <lightning-input type="file" data-id="amlPolicy" accept={allowedFileTypes}
                                 label="AML policy / AML-CFT programme (latest version)" onchange={handleFileUpload}></lightning-input>
@@ -576,7 +575,7 @@
                                         <div class="same-as-box">
                                             <lightning-icon icon-name="utility:copy" size="small" class="same-as-icon"></lightning-icon>
                                             <div class="same-as-field">
-                                                <lightning-combobox label="Same as person" placeholder="Select a person to copy their details"
+                                                <lightning-combobox label="Same person" placeholder="Select a person to copy their details"
                                                     data-field="sameAsPerson" value={personForm.sameAsPerson}
                                                     options={sameAsOptions} onchange={handlePersonFormChange}
                                                     field-level-help="If this individual already holds another role, select them here. We won't create a duplicate — we'll add this role to the same person.">
@@ -638,7 +637,7 @@
 
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="file" data-field="emiratesIDCopy" accept={allowedFileTypes}
-                                        label="Emirates ID Copy" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} required style="margin-bottom: 1px;"></lightning-input>
+                                        label="Emirates ID Copy" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} required={isEmiratesIdRequired} style="margin-bottom: 1px;"></lightning-input>
                                     <template if:true={personForm.emiratesIDCopy}><span style="color:green">Emirates ID Copy selected</span></template>
                                 </div>
                                 <div class="slds-col slds-size_1-of-2">
@@ -648,7 +647,7 @@
 
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="file" data-field="visaCopy" accept={allowedFileTypes}
-                                        label="Visa Copy" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} required style="margin-bottom: 1px;"></lightning-input>
+                                        label="Visa Copy" onchange={handlePersonFormFileUpload} disabled={personFieldsDisabled} required={isVisaCopyRequired} style="margin-bottom: 1px;"></lightning-input>
                                     <template if:true={personForm.visaCopy}><span style="color:green">Visa Copy selected</span></template>
                                 </div>
                                 <div class="slds-col slds-size_1-of-2">
@@ -1098,8 +1097,8 @@
                                     type="checkbox" 
                                     name="termsAndConditions" 
                                     data-id="disclaimer" 
-                                    onchange={handleInputChange} 
-                                    required>
+                                    checked={isdisclaimerChecked}
+                                    onchange={handleInputChange}>
                                 </lightning-input>
                             </div>
                 
@@ -1143,7 +1142,7 @@
             <template if:true={showSuccessPage}>
                 <div class="slds-p-around_large slds-text-align_center">
                     <h2 style="margin-top: 150px; font-size: 20px; font-weight: bold;">
-                        You have successfully submitted your form. We are currently reviewing your documents.
+                        You have successfully submitted your form. The information provided will be converted into a KYC document. Please ensure the final document is signed and stamped by the company's authorized signatory and returned to us.
                     </h2>
             
                     <div class="slds-m-top_xx-large slds-text-align_left" style="max-width: 600px; margin: 40px auto 0;">

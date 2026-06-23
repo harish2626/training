@@ -96,6 +96,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     checkLandlineNumber = false;
     checkAgencyEmail = false;
     checkRequetsSubmitted = false;
+    isSubmitting = false;
 
     showError = false;
     errorDupliTradeMessage = '';
@@ -428,11 +429,12 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     // ===== Wizard navigation =====
     handleStepClick(event) {
         const target = parseInt(event.currentTarget.dataset.step, 10);
-        // Allow jumping back to a previously completed step only
-        if (!isNaN(target) && target < this.currentStep) {
+        // Allow jumping to any step for viewing purposes (validation is only enforced on Next/Submit)
+        if (!isNaN(target) && target >= 1 && target <= this.totalSteps && target !== this.currentStep) {
             this.currentStep = target;
             this.showError = false;
             this.errorMessage = '';
+            this.scrollToTop();
         }
     }
 
@@ -521,6 +523,10 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         return this.personForm.personType === 'UBO'
             || this.personForm.personType === 'Authorized signatories';
     }
+
+    // Emirates ID and Visa are not required for international agencies
+    get isEmiratesIdRequired() { return !this.internationLocation; }
+    get isVisaCopyRequired() { return !this.internationLocation; }
 
     // "Same as" quick-fill: available whenever there is at least one other person to copy from.
     // This allows the user to reuse the same individual across multiple roles (person types)
@@ -689,13 +695,13 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             return;
         }
 
-         if (!this.personForm.sameAsPerson && !this.personForm.visaCopy) {
+         if (!this.personForm.sameAsPerson && !this.internationLocation && !this.personForm.visaCopy) {
             this.showError = true;
             this.errorMessage = 'Visa Copy is required for this person.';
             return;
         }
 
-         if (!this.personForm.sameAsPerson && !this.personForm.emiratesIDCopy) {
+         if (!this.personForm.sameAsPerson && !this.internationLocation && !this.personForm.emiratesIDCopy) {
             this.showError = true;
             this.errorMessage = 'Emirates ID Copy is required for this person.';
             return;
@@ -818,7 +824,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
 
     // Check for trade license already in existing broker account
     handleCheckLicenseNumber(){
-        getTradeLicenseNumber({tradeLicenseNumber : this.formData.tradeLicenseNumber})
+        return getTradeLicenseNumber({tradeLicenseNumber : this.formData.tradeLicenseNumber})
         .then((result) => {
             console.log('OUTPUT handleCheckLicenseNumber : ', result);
             this.checkTradeLNumber = result;
@@ -826,16 +832,17 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
                 this.errorMessage = 'Registration cannot be completed as Trade License Number is already registered.';
                 this.errorDupliTradeMessage = 'Trade License Number is already registered.';
                 this.showError = true;
-                
             }
+            return result;
         }).catch((err) => {
             console.log('OUTPUT Error :' + err);
+            return false;
         });
     }
     
     // Check for Landline Number already in existing broker account
     handleLandlineNumber(){
-        getLandlineNumber({landline : this.formData.landline})
+        return getLandlineNumber({landline : this.formData.landline})
         .then((result) => {
             console.log('OUTPUT handleLandlineNumber : ', result);
             this.checkLandlineNumber = result;
@@ -843,24 +850,27 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
                 this.errorMessage = 'Registration cannot be completed as Landline is already registered.';
                 this.showError = true;
             }
+            return result;
         }).catch((err) => {
             console.log('OUTPUT Error :' + err);
+            return false;
         });
     }
 
     // Check for agencyEmail already in existing broker account
     handleAgencyEmail(){
-        getAgencyEmail({agencyEmailId : this.formData.agencyEmailId})
+        return getAgencyEmail({agencyEmailId : this.formData.agencyEmailId})
         .then((result) => {
             console.log('OUTPUT handleAgencyEmail : ', result);
             this.checkAgencyEmail = result;
             if(this.checkAgencyEmail==true){
                 this.errorMessage = 'Registration cannot be completed as Agency Email is already registered.';
                 this.showError = true;
-                
             }
+            return result;
         }).catch((err) => {
             console.log('OUTPUT Error :' + err);
+            return false;
         });
     }
 
@@ -1331,16 +1341,26 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     }
 
     // Create Broker Account
-    handleCreateBroker() {
+    async handleCreateBroker() {
+        // DEF-02: Prevent double submission
+        if (this.isSubmitting) {
+            return;
+        }
+
         console.log('OUTPUT this.formData : ' , this.formData);
         console.log('OUTPUT Uploaded Files:', JSON.stringify(this.selectedMultiFiles));
         this.Spinner = false;
         this.showSuccessPage = false;
         this.checkRequetsSubmitted = false;
 
-        this.handleCheckLicenseNumber();
-        this.handleLandlineNumber();
-        this.handleAgencyEmail();
+        // DEF-01: Await duplicate checks before proceeding with validation
+        this.Spinner = true;
+        await Promise.all([
+            this.handleCheckLicenseNumber(),
+            this.handleLandlineNumber(),
+            this.handleAgencyEmail()
+        ]);
+        this.Spinner = false;
 
 
         if(this.checkTradeLNumber==true){
@@ -1571,6 +1591,27 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             }
         }
 
+        // DEF-06: Validate personnel date fields (passport/emirates ID expiry must be in the future)
+        for (let person of this.personnel) {
+            const personName = `${person.firstName || ''} ${person.lastName || ''}`.trim() || 'Unnamed person';
+            if (person.passportExpiryDate) {
+                const passportDate = new Date(person.passportExpiryDate);
+                if (passportDate <= todayDate) {
+                    this.showError = true;
+                    this.errorMessage = `Passport Expiry Date for "${personName}" must be a future date.`;
+                    return;
+                }
+            }
+            if (person.emiratesIDExpiryDate) {
+                const emiratesDate = new Date(person.emiratesIDExpiryDate);
+                if (emiratesDate <= todayDate) {
+                    this.showError = true;
+                    this.errorMessage = `Emirates ID Expiry Date for "${personName}" must be a future date.`;
+                    return;
+                }
+            }
+        }
+
         // Date fields that must be in the past
         const pastDateFields = [
             { key: 'ornIssuanceDate', label: 'ORN Issuance Date' },
@@ -1593,6 +1634,8 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         this.showError = false;
         this.errorMessage = '';
 
+        // DEF-02: Set submitting guard and show spinner
+        this.isSubmitting = true;
         this.Spinner = true;
 
         const inputData = this.buildInputData();
@@ -1602,6 +1645,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             console.log('OUTPUT: ', result);
             if (!result || typeof result !== 'string' || !/^([A-Za-z0-9]{15}|[A-Za-z0-9]{18})$/.test(result)) {
                 this.Spinner = false;
+                this.isSubmitting = false;
                 this.checkRequetsSubmitted = false;
                 this.showError = true;
                 this.errorMessage = `Broker creation failed: ${result}`;
@@ -1617,6 +1661,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             .then((response) => {
                 console.log('OUTPUT Files uploaded successfully:', response);
                 this.Spinner = false;
+                this.isSubmitting = false;
                 this.showSuccessPage = true;
             })
             .catch((error) => {
@@ -1624,13 +1669,19 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
                     if (error.body && error.body.message) {
                         console.error('Detailed Error:', error.body.message);
                     }
-                    this.Spinner = true;
+                    // DEF-03: Fixed — was incorrectly set to true, trapping the user
+                    this.Spinner = false;
+                    this.isSubmitting = false;
+                    this.showError = true;
+                    this.errorMessage = 'File upload failed. Your registration was saved but documents could not be uploaded. Please contact ORA for support.';
             });
         })
         .catch(error => {
-            alert('Error: You Registration can not be complete due to some server error, Please contact ORA for support.');
-            console.log('OUTPUT Error creating broker :', error.body.message);
+            this.showError = true;
+            this.errorMessage = 'Error: Your Registration cannot be completed due to a server error. Please contact ORA for support.';
+            console.log('OUTPUT Error creating broker :', error.body ? error.body.message : error);
             this.Spinner = false;
+            this.isSubmitting = false;
             this.checkRequetsSubmitted = false;
         });
     }
