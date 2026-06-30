@@ -19,7 +19,7 @@
                             <template if:true={step.completed}>
                                 <lightning-icon icon-name="utility:check" size="x-small" variant="inverse"></lightning-icon>
                             </template>
-                            <template if:false={step.completed}>{step.num}</template>
+                            <template if:false={step.completed}>{step.displayNum}</template>
                         </span>
                         <span class="step-text">
                             <span class="step-title">{step.title}</span>
@@ -238,13 +238,6 @@
                                     
                                 </div>
                                 <div class="slds-col slds-size_1-of-2">
-                                    <lightning-input  placeholder="https://example.com" label="Website"  
-                                        value={website} data-id="website" onchange={handleInputChange} type="url" 
-                                        message-when-pattern-mismatch="Please enter a valid website URL (e.g., https://example.com)"></lightning-input>
-                                </div>
-                            
-
-                                <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="file" data-id="POACopy" required
                                         accept={allowedFileTypes}  style="margin-bottom: 1px;"
                                         label="Attested Power of Attorney for authorized signatory Copy" onchange={handleFileUpload}></lightning-input>
@@ -256,9 +249,16 @@
                                     </template>
                                 </div>
                                 <div class="slds-col slds-size_1-of-2">
-                                    <lightning-input  type="date" placeholder="POA Expiry date" label="POA Expiry date" required
+                                    <lightning-input  type="date" placeholder="POA Expiry date" label="POA Expiry date"
                                         min={today} value={POAExpiryDate} data-id="POAExpiryDate" onchange={handleInputChange}></lightning-input>
                                 </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input  placeholder="https://example.com" label="Website"  
+                                        value={website} data-id="website" onchange={handleInputChange} type="url" 
+                                        message-when-pattern-mismatch="Please enter a valid website URL (e.g., https://example.com)"></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2"></div>
 
                                 <template if:true={dubaiLocation}>
                                     <div class="slds-col slds-size_1-of-2">
@@ -478,6 +478,10 @@
 
 
                                 <div class="slds-col slds-size_1-of-2">
+                                    <lightning-input type="text"  data-id="bankAccountName" value={bankAccountName}
+                                        label="Account Name"  placeholder="Account Name" onchange={handleInputChange} required></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
                                     <lightning-input pattern="[0-9]{1,25}"  data-id="accountNumber" value={accountNumber}
                                         label="Account Number"  placeholder="Account Number" onchange={handleInputChange} required></lightning-input>
                                 </div>
@@ -502,16 +506,14 @@
                                         <div style="color:red;font-weight: bold;">{erroribanLetterDoc}</div>
                                     </template>
                                 </div>
-                                <template if:true={internationLocation}>
-                                    <div class="slds-col slds-size_1-of-2">
-                                        <template if:true={CurrencyValues.data}>
-                                            <lightning-combobox label="Currency"
-                                                placeholder="Currency" data-id="accountCurrency" value={accountCurrency}
-                                                options={CurrencyValues.data.values} onchange={handleInputChange} required>
-                                            </lightning-combobox>
-                                        </template>
-                                    </div>
-                                </template>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <template if:true={CurrencyValues.data}>
+                                        <lightning-combobox label="Currency"
+                                            placeholder="Currency" data-id="accountCurrency" value={accountCurrency}
+                                            options={CurrencyValues.data.values} onchange={handleInputChange} required>
+                                        </lightning-combobox>
+                                    </template>
+                                </div>
                             </div>
 
                         <h2 class="step-subheading">Introduced by (ORA team)</h2>
@@ -644,7 +646,17 @@
                                         field-level-help="Politically Exposed Person (PEP): A person who holds, or has held, a prominent public position, including their close family members and close associates.">
                                     </lightning-combobox>
                                 </div>
-                                <div class="slds-col slds-size_1-of-2"></div>
+                                <template if:true={showOwnerPercentage}>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input type="number" label="Owner Percentage" data-field="ownerPercentage"
+                                            placeholder="e.g. 25" min="0" max="100" step="1"
+                                            value={personForm.ownerPercentage} onchange={handlePersonFormChange} disabled={personFieldsDisabled}>
+                                        </lightning-input>
+                                    </div>
+                                </template>
+                                <template if:false={showOwnerPercentage}>
+                                    <div class="slds-col slds-size_1-of-2"></div>
+                                </template>
 
                                 <template if:true={showDocumentFields}>
                                 <div class="slds-col slds-size_1-of-2">
@@ -654,7 +666,7 @@
                                 </div>
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="date" label="Passport Expiry Date" min={today}
-                                        data-field="passportExpiryDate" value={personForm.passportExpiryDate} onchange={handlePersonFormChange} disabled={personDocFieldsDisabled}></lightning-input>
+                                        data-field="passportExpiryDate" value={personForm.passportExpiryDate} onchange={handlePersonFormChange} disabled={personDocFieldsDisabled} required={showDocumentFields}></lightning-input>
                                 </div>
 
                                 <div class="slds-col slds-size_1-of-2">
@@ -664,7 +676,7 @@
                                 </div>
                                 <div class="slds-col slds-size_1-of-2">
                                     <lightning-input type="date" label="Emirates ID Expiry Date" min={today}
-                                        data-field="emiratesIDExpiryDate" value={personForm.emiratesIDExpiryDate} onchange={handlePersonFormChange} disabled={personDocFieldsDisabled}></lightning-input>
+                                        data-field="emiratesIDExpiryDate" value={personForm.emiratesIDExpiryDate} onchange={handlePersonFormChange} disabled={personDocFieldsDisabled} required={isEmiratesIdRequired}></lightning-input>
                                 </div>
 
                                 <div class="slds-col slds-size_1-of-2">
@@ -1100,7 +1112,7 @@
                                     </template>
 
                                     <template if:false={personnel.length}>
-                                        <p class="slds-text-body_regular"> Please add all directors/managers, authorized signatories, and Ultimate beneficial owners (UBOs) holding ≥25% ownership or control; if the same person holds more than one role, please select “Same as person” and select the person. Valid passport copies, Emirates ID (where applicable), and proof of address must be submitted for all individuals listed above.</p>
+                                        <p class="slds-text-body_regular"> Please add all directors/managers, authorized signatories, Ultimate beneficial owners (UBOs) holding ≥25% ownership or control, Administration / Operations Manager, and Head of Sales. If the same person holds more than one role, please select "Same Person." Valid passport copies, Emirates ID (where applicable), and proof of address may be required based on the person type selected.</p>
                                     </template>
                                 </div>
                     </div>

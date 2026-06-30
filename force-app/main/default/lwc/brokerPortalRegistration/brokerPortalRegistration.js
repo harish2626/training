@@ -55,6 +55,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         poBox : '',
         bankName : '',
         bankBranch : '',
+        bankAccountName : '',
         accountNumber : '',
         ibanNumber: '',
         swiftCode : '',
@@ -177,7 +178,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     allPersonTypeOptions = [
         { label: 'Directors/Managers', value: 'Directors/Managers' },
         { label: 'Authorized signatories', value: 'Authorized signatories' },
-        { label: 'Ultimate beneficial owners (UBOs) holding ≥25% ownership or control', value: 'UBO' },
+        { label: 'Owner', value: 'UBO' },
         { label: 'Administration / Operations Manager', value: 'Administration / Operations Manager' },
         { label: 'Head of Sales', value: 'Head of Sales' }
     ];
@@ -381,19 +382,16 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     get showNextButton() { return this.currentStep < this.totalSteps; }
 
     get stepItems() {
+        let displayNum = 0;
         return this.stepConfig
-            .filter((s) => {
-                // Hide AML step (4) for international agencies
-                if (s.num === 4 && this.internationLocation) return false;
-                return true;
-            })
             .map((s) => {
+                displayNum += 1;
                 const completed = this.completedSteps.has(s.num);
                 const active = s.num === this.currentStep;
                 let cssClass = 'step-item';
                 if (active) { cssClass += ' step-item_active'; }
                 if (completed && !active) { cssClass += ' step-item_completed'; }
-                return { ...s, completed, active, cssClass };
+                return { ...s, displayNum, completed, active, cssClass };
             });
     }
 
@@ -428,6 +426,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     get trnNumber() { return this.formData.trnNumber; }
     get bankName() { return this.formData.bankName; }
     get bankBranch() { return this.formData.bankBranch; }
+    get bankAccountName() { return this.formData.bankAccountName; }
     get accountNumber() { return this.formData.accountNumber; }
     get ibanNumber() { return this.formData.ibanNumber; }
     get swiftCode() { return this.formData.swiftCode; }
@@ -447,9 +446,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     handleStepClick(event) {
         const target = parseInt(event.currentTarget.dataset.step, 10);
         // Allow jumping to any step for viewing purposes (validation is only enforced on Next/Submit)
-        // Skip AML step (4) for international agencies
         if (!isNaN(target) && target >= 1 && target <= this.totalSteps && target !== this.currentStep) {
-            if (target === 4 && this.internationLocation) return;
             this.currentStep = target;
             this.showError = false;
             this.errorMessage = '';
@@ -460,10 +457,6 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     handleBack() {
         if (this.currentStep > 1) {
             this.currentStep -= 1;
-            // Skip AML step (4) for international agencies
-            if (this.currentStep === 4 && this.internationLocation) {
-                this.currentStep -= 1;
-            }
             this.showError = false;
             this.errorMessage = '';
             this.scrollToTop();
@@ -474,11 +467,6 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         if (this.validateCurrentStep() && this.currentStep < this.totalSteps) {
             this.completedSteps = new Set([...this.completedSteps, this.currentStep]);
             this.currentStep += 1;
-            // Skip AML step (4) for international agencies
-            if (this.currentStep === 4 && this.internationLocation) {
-                this.completedSteps = new Set([...this.completedSteps, 4]);
-                this.currentStep += 1;
-            }
             this.scrollToTop();
         }
     }
@@ -509,7 +497,22 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         const controls = [...this.template.querySelectorAll('lightning-input, lightning-combobox')];
         let valid = true;
         controls.forEach((ctrl) => {
-            if (ctrl.type === 'file') { return; }
+            if (ctrl.type === 'file') {
+                // Validate required file inputs by checking if the file has been uploaded
+                if (ctrl.required) {
+                    const fieldKey = ctrl.dataset.id || ctrl.dataset.field;
+                    const fileUploaded = this.selectedMultiFiles.some(f => f.key === fieldKey);
+                    if (!fileUploaded) {
+                        valid = false;
+                        ctrl.setCustomValidity('Please upload a file.');
+                        ctrl.reportValidity();
+                    } else {
+                        ctrl.setCustomValidity('');
+                        ctrl.reportValidity();
+                    }
+                }
+                return;
+            }
             if (typeof ctrl.reportValidity === 'function' && !ctrl.reportValidity()) {
                 valid = false;
             }
@@ -538,7 +541,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             id: `person-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             personType: '', sameAsPerson: '', firstName: '', lastName: '', email: '',
             mobileCountryCode: '', mobileNumber: '', designation: '', nationality: '', isPEP: '',
-            passportExpiryDate: '', emiratesIDExpiryDate: '',
+            ownerPercentage: '', passportExpiryDate: '', emiratesIDExpiryDate: '',
             passportCopy: null, emiratesIDCopy: null, visaCopy: null, proofOfAddress: null
         };
     }
@@ -561,6 +564,11 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     get showDocumentFields() {
         return this.personForm.personType !== 'Administration / Operations Manager'
             && this.personForm.personType !== 'Head of Sales';
+    }
+
+    // Owner Percentage is only shown for UBO (Owner) person type
+    get showOwnerPercentage() {
+        return this.personForm.personType === 'UBO';
     }
 
     // "Same as" quick-fill: available whenever there is at least one other person to copy from.
@@ -854,7 +862,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
     // At least one person required for each of the mandatory types
     validatePersonnelCoverage() {
         const labels = this.personTypeLabels;
-        const required = ['Directors/Managers', 'Authorized signatories', 'UBO', 'Administration / Operations Manager'];
+        const required = ['Directors/Managers', 'Authorized signatories', 'UBO', 'Administration / Operations Manager', 'Head of Sales'];
         const present = new Set(this.personnel.map((p) => p.personType));
         const missing = required.filter((t) => !present.has(t));
         if (missing.length) {
@@ -1204,7 +1212,7 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
                 designation: primary.designation,
                 passportExpiryDate: primary.passportExpiryDate,
                 emiratesIDExpiryDate: primary.emiratesIDExpiryDate,
-                isPEP: primary.isPEP
+                isPEP: primary.isPEP === 'Yes'
             };
 
             // Role stub for the primary person (mapped onto the Admin/owner contact)
@@ -1244,7 +1252,8 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
                         nationality: person.nationality,
                         passportExpiryDate: person.passportExpiryDate,
                         emiratesIDExpiryDate: person.emiratesIDExpiryDate,
-                        isPEP: person.isPEP
+                        isPEP: person.isPEP === 'Yes',
+                        ownerPercentage: person.ownerPercentage || null
                     });
                 }
             });
@@ -1433,6 +1442,13 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
         this[`check${field}`] = true;
         this[`error${field}`] = false;
 
+        // Clear any custom validity error on the file input
+        const fileInput = this.template.querySelector(`[data-id="${field}"]`);
+        if (fileInput && typeof fileInput.setCustomValidity === 'function') {
+            fileInput.setCustomValidity('');
+            fileInput.reportValidity();
+        }
+
         console.log('OUTPUT  this[`check${field}`] : ' + `check${field}` +  this[`check${field}`])
         console.log('OUTPUT  this[`error${field}`] : ' + `error${field}` + this[`error${field}`])
     }
@@ -1502,10 +1518,11 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             //{ key: 'trnNumber', message: 'TRN (Tax Registration Number) cannot be empty' },
             { key: 'bankName', message: 'Bank Name cannot be empty' },
             { key: 'bankBranch', message: 'Bank Branch cannot be empty' },
+            { key: 'bankAccountName', message: 'Account Name cannot be empty' },
             { key: 'accountNumber', message: 'Account Number cannot be empty' },
             { key: 'ibanNumber', message: 'IBAN Number cannot be empty' },
             { key: 'swiftCode', message: 'Swift Code cannot be empty' },
-            //{ key: 'accountCurrency', message: 'Currency cannot be empty' },
+            { key: 'accountCurrency', message: 'Currency cannot be empty' },
             { key: 'detailedRegisteredAddress', message: 'Detailed Registered Address cannot be empty' }
         ];
 
@@ -1523,8 +1540,6 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             requiredFields.push({ key: 'admExpiryDate', message: 'ADM Expiry Date cannot be empty' });
         //} else if(!this.internationLocation && (!this.formData.trnNumber || this.formData.trnNumber.trim() === '')) {
         //    requiredFields.push({ key: 'trnNumber', message: 'TRN (Tax Registration Number) cannot be empty' });
-        } else if(this.internationLocation && (!this.formData.accountCurrency || this.formData.accountCurrency.trim() === '')) {
-            requiredFields.push({ key: 'accountCurrency', message: 'Currency cannot be empty' });
         } else if((!this.formData.landlineCountryCode || this.formData.landlineCountryCode.trim() === '')) {
             requiredFields.push({ key: 'landlineCountryCode', message: 'Landline Country Code cannot be empty' });
         }
@@ -1622,14 +1637,8 @@ export default class BrokerPortalRegistration extends NavigationMixin(LightningE
             }
         }*/
 
-        // POA Expiry date becomes mandatory if the POA is attached
-        let poaCopyUploaded = this.selectedMultiFiles.find(f => f.key === 'POACopy');
-        let poaExpiryDate = this.formData.POAExpiryDate; 
-        if (poaCopyUploaded && (!poaExpiryDate || poaExpiryDate.trim() === '')) {
-            this.showError = true;
-            this.errorMessage = 'POA Expiry Date is required if POA Copy is uploaded';
-            return; 
-        }
+        // POA Expiry date is optional
+        // (previously was mandatory when POA Copy was uploaded, now fully optional)
 
         // RERA Certificate mandatory
         if (this.dubaiLocation || this.abudhabiLocation) {

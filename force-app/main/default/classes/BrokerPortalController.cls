@@ -326,6 +326,7 @@ global without sharing class  BrokerPortalController {
                 PO_BOX__c =  (String) inputData.get('poBox'),
                 Bank_Name__c = (String) inputData.get('bankName'),
                 Bank_Branch__c = (String) inputData.get('bankBranch'),
+                Bank_Account_Name__c = (String) inputData.get('bankAccountName'),
                 Bank_Account_Number__c = (String) inputData.get('accountNumber'),
                 IBAN_Number__c =  (String) inputData.get('ibanNumber'),
                 Swift_Code__c = (String) inputData.get('swiftCode'),
@@ -370,7 +371,8 @@ global without sharing class  BrokerPortalController {
                 : null,
                 Emirates_ID_Expiry_Date__c  = String.isNotBlank((String) inputData.get('emiratesIDExpiryDate')) 
                 ? Date.valueOf((String) inputData.get('emiratesIDExpiryDate')) 
-                : null
+                : null,
+                isPEP__c = inputData.get('isPEP') == true
             );
 
             conlist.add(newContact);
@@ -462,6 +464,10 @@ global without sharing class  BrokerPortalController {
                             : null,
                         Emirates_ID_Expiry_Date__c = String.isNotBlank((String) personMap.get('emiratesIDExpiryDate'))
                             ? Date.valueOf((String) personMap.get('emiratesIDExpiryDate'))
+                            : null,
+                        isPEP__c = personMap.get('isPEP') == true,
+                        Owner_Percentage__c = personMap.get('ownerPercentage') != null
+                            ? Decimal.valueOf(String.valueOf(personMap.get('ownerPercentage')))
                             : null
                     );
                     conlist.add(personContact);
